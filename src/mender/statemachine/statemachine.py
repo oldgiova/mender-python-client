@@ -29,6 +29,7 @@ import mender.scripts.runner as installscriptrunner
 import mender.settings.settings as settings
 from mender.client import HTTPUnathorized
 from mender.util import timeutil
+from mender.remoteterminal import remoteterminal
 
 log = logging.getLogger(__name__)
 
@@ -173,7 +174,8 @@ class AuthorizedStateMachine(StateMachine):
                 )  # Update machine runs when idle detects an update
             except HTTPUnathorized:
                 context.authorized = False
-                return
+                return # @fixme can it be change to 'break'?
+        # @fixme: we are no longer authorized, the WebSocket connection needs to be closed
 
 
 #
@@ -245,9 +247,13 @@ class IdleStateMachine(AuthorizedStateMachine):
         super().__init__()
         self.sync_inventory = SyncInventory()
         self.sync_update = SyncUpdate()
+        self.remote_terminal = remoteterminal.RemoteTerminal()
 
     def run(self, context):
         while context.authorized:
+            log.debug("about to: remote_terminal.run(context)")
+            self.remote_terminal.run(context)
+            log.debug("just after: remote_terminal.run(context)")
             self.sync_inventory.run(context)
             if self.sync_update.run(context):
                 # Update available

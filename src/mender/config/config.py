@@ -33,6 +33,7 @@ class Config:
     UpdatePollIntervalSeconds = 5
     RetryPollIntervalSeconds = 5
     ServerCertificate = ""
+    RemoteTerminal = False
 
     def __init__(self, global_conf: dict, local_conf: dict):
         vals = {**global_conf, **local_conf}
@@ -72,6 +73,9 @@ class Config:
             elif k == "ServerCertificate":
                 log.debug(f"ServerCertificate: {v}")
                 self.ServerCertificate = v
+            elif k == "RemoteTerminal":
+                log.debug(f"RemoteTerminal: {v}")
+                self.RemoteTerminal = (str)(v).lower() in ['true', '1', 'yes']
             else:
                 log.error(f"The key {k} is not recognized by the Python client")
 
