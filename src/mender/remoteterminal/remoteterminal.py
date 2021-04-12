@@ -132,8 +132,14 @@ class RemoteTerminal:
         if context.config.RemoteTerminal and context.authorized and not self._ws_connected:
             log.debug(f'_ws_connected={self._ws_connected}')
             self._ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-            # @fixme: check if the file exists
-            self._ssl_context.load_verify_locations(context.config.ServerCertificate)
+
+            # @fixme: check if the file exists, and check if entry exist as the cert may be taken from ca-certificates
+            if context.config.ServerCertificate:
+                self._ssl_context.load_verify_locations(context.config.ServerCertificate)
+            else:
+                self._ssl_context = ssl.create_default_context()
+
+
 
             # the JWT should already be acquired as we supposed to be in AuthorizedState
             self._ext_headers = {
