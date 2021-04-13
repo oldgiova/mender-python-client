@@ -93,9 +93,12 @@ class RemoteTerminal:
         try:
             while True:
                 log.debug('about to waiting for msg from backend')
-                greeting = await self._client.recv()
-                msg: dict = msgpack.unpackb(greeting)
-                log.debug(f'msg: {msg}')
+                packed_msg = await self._client.recv()
+                msg: dict = msgpack.unpackb(packed_msg)
+                log.debug(f'after unpackb msg: {msg}')
+                #decode keys (bytes to str)
+                msg = {k.decode('utf8') if type(k) is bytes else k: v for k,v in msg.items()}
+                log.debug(f'after decoding utf8: {msg}')
                 hdr = msg['hdr']
                 if hdr['typ'] == 'new':
                     self._sid = hdr['sid']
@@ -109,12 +112,12 @@ class RemoteTerminal:
                             os.write(stream, msg['body'])
                             # os.write(stream, 'ls\n'.encode('utf-8'))
                         except Exception as ex_instance:
-                            log.debug(f'while writing to master: {type(ex_instance)}')
-                            log.debug(f'while writing to master: {ex_instance}')
+                            log.error(f'while writing to master: {type(ex_instance)}')
+                            log.error(f'while writing to master: {ex_instance}')
 
         except Exception as inst:
-            log.debug(f'hello: {type(inst)}')
-            log.debug(f'hello: {inst}')
+            log.error(f'hello: {type(inst)}')
+            log.error(f'hello: {inst}')
 
     async def gather(self):
         await asyncio.gather(self.ws_read_from_backend_write_to_terminal(), self.ws_send_terminal_stdout_to_backend())
@@ -124,8 +127,8 @@ class RemoteTerminal:
             log.debug('about to run asyncio.gather')
             asyncio.run(self.gather())
         except Exception as inst:
-            log.debug(f'in Run: {type(inst)}')
-            log.debug(f'in Run: {inst}')
+            log.error(f'in Run: {type(inst)}')
+            log.error(f'in Run: {inst}')
 
     def run(self, context):
         self._context = context
