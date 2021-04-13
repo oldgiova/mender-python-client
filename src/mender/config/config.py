@@ -34,6 +34,7 @@ class Config:
     RetryPollIntervalSeconds = 5
     ServerCertificate = ""
     RemoteTerminal = False
+    ShellCommand = "/bin/sh"
 
     def __init__(self, global_conf: dict, local_conf: dict):
         vals = {**global_conf, **local_conf}
@@ -76,6 +77,9 @@ class Config:
             elif k == "RemoteTerminal":
                 log.debug(f"RemoteTerminal: {v}")
                 self.RemoteTerminal = (str)(v).lower() in ['true', '1', 'yes']
+            elif k == "ShellCommand":
+                log.debug(f"ShellCommand: {v}")
+                self.ShellCommand = v
             else:
                 log.error(f"The key {k} is not recognized by the Python client")
 
