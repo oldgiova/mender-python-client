@@ -71,8 +71,8 @@ class RemoteTerminal:
                 resp_header = {'proto': 1, 'typ': 'shell', 'sid': self._sid}
                 resp_props = {'status': 1}
                 response = {'hdr': resp_header, 'props': resp_props, 'body': data}
-                #log.debug(f'resp: {response}')
-                await self._client.send(msgpack.packb(response))
+                log.debug(f'resp: {response}')
+                await self._client.send(msgpack.packb(response, use_bin_type=True))
                 log.debug('data sent')
 
                 # @fixme try another approach: instead of making the fd non-blocking run in a separate asyncio.to_thread (same fixme is down there)
@@ -94,11 +94,7 @@ class RemoteTerminal:
             while True:
                 log.debug('about to waiting for msg from backend')
                 packed_msg = await self._client.recv()
-                msg: dict = msgpack.unpackb(packed_msg)
-                log.debug(f'after unpackb msg: {msg}')
-                #decode keys (bytes to str)
-                msg = {k.decode('utf8') if type(k) is bytes else k: v for k,v in msg.items()}
-                log.debug(f'after decoding utf8: {msg}')
+                msg: dict = msgpack.unpackb(packed_msg, raw=False)
                 hdr = msg['hdr']
                 if hdr['typ'] == 'new':
                     self._sid = hdr['sid']
