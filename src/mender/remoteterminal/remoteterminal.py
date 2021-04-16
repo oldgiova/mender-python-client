@@ -27,10 +27,12 @@ import websockets
 
 log = logging.getLogger(__name__)
 
+
 class RemoteTerminal:
-    ''' this class serves the RemoteTerminal aka remote shell feature over the WebSocket.
-        This supposed to be the only instance and serves single or many concurrent connections (next release?)
-    '''
+    """ This class serves the RemoteTerminal aka remote shell feature
+        over the WebSocket. This supposed to be the only instance and
+        serves single or many concurrent connections (next release?)
+    """
 
     def __init__(self):
         log.debug("RemoteTerminal initialized")
@@ -40,13 +42,22 @@ class RemoteTerminal:
         self._ws_connected = False
         self._hello_failed = False
         self._context = None
-        #started by a protocol msg "new", ended (set back to False) after a protocol msg "end" @todo
+        # started by a protocol msg "new", ended (set back to False) after a protocol msg "end"
+        # @fixme
         self._session_started = False
+        self._ext_headers = None
+        self._ssl_context = None
+        self._master = None
+        self._slave = None
+        self._shell = None
+        self.background_ws_thread = None
 
     async def ws_connect(self):
         # from context we receive sth like: "ServerURL": "https://docker.mender.io"
-        # we need replace the protcol and API entry point to achive like: "wss://docker.mender.io/api/devices/v1/deviceconnect/connect"
-        uri = self._context.config.ServerURL.replace("https", "wss") + "/api/devices/v1/deviceconnect/connect"
+        # we need replace the protcol and API entry point to achive like:
+        # "wss://docker.mender.io/api/devices/v1/deviceconnect/connect"
+        uri = self._context.config.ServerURL.replace(
+            "https", "wss") + "/api/devices/v1/deviceconnect/connect"
         try:
             self._client = await websockets.connect(
                 uri, ssl=self._ssl_context, extra_headers=self._ext_headers)
@@ -58,8 +69,8 @@ class RemoteTerminal:
 
     async def ws_send_terminal_stdout_to_backend(self):
         # wait for connection in another coroutine
-        while not self._session_started and not self._hello_failed:
-            await asyncio.sleep(1)
+        # while not self._session_started and not self._hello_failed:
+        #    await asyncio.sleep(1)
         if self._hello_failed:
             log.debug('leaving ws_send_terminal_stdout_to_backend')
             return -1
@@ -70,20 +81,26 @@ class RemoteTerminal:
                 data = os.read(self._master, 102400)
                 resp_header = {'proto': 1, 'typ': 'shell', 'sid': self._sid}
                 resp_props = {'status': 1}
-                response = {'hdr': resp_header, 'props': resp_props, 'body': data}
+                response = {'hdr': resp_header,
+                            'props': resp_props, 'body': data}
                 #log.debug(f'resp: {response}')
                 await self._client.send(msgpack.packb(response))
                 log.debug('data sent')
 
-                # @fixme try another approach: instead of making the fd non-blocking run in a separate asyncio.to_thread (same fixme is down there)
+                # @fixme try another approach: instead of making the fd non-blocking
+                # run in a separate asyncio.to_thread
+                # (same fixme is down there)
             except Exception as ex_instance:
-                pass # @fixme those execption are catched all the time due to non-blocking, commented out for keeping the output tidier for testing
+                pass    # @fixme those execption are catched all the time due to non-blocking,
+                # commented out for keeping the output tidier for testing
                 #log.debug(f'send_stdout: {type(ex_instance)}')
                 #log.debug(f'send_stdout: {ex_instance}')
 
     async def ws_read_from_backend_write_to_terminal(self):
-#        while self._client is None:
- #           await asyncio.sleep(1)
+        #        while self._client is None:
+     #           await asyncio.sleep(1)
+        log.debug(locals())
+        log.debug(f'self client {self._client}')
         await self.ws_connect()
         if self._client is None:
             self._hello_failed = True
@@ -100,7 +117,7 @@ class RemoteTerminal:
                 if hdr['typ'] == 'new':
                     self._sid = hdr['sid']
                     self._session_started = True
-                if hdr['typ'] == 'shell' :
+                if hdr['typ'] == 'shell':
                     log.debug('waiting for _master for writing')
                     _, ready, _, = select.select([], [self._master], [])
                     for stream in ready:
@@ -109,15 +126,31 @@ class RemoteTerminal:
                             os.write(stream, msg['body'])
                             # os.write(stream, 'ls\n'.encode('utf-8'))
                         except Exception as ex_instance:
-                            log.debug(f'while writing to master: {type(ex_instance)}')
-                            log.debug(f'while writing to master: {ex_instance}')
+                            log.debug(
+                                f'while writing to master: {type(ex_instance)}')
+                            log.debug(
+                                f'while writing to master: {ex_instance}')
 
         except Exception as inst:
             log.debug(f'hello: {type(inst)}')
             log.debug(f'hello: {inst}')
 
+    def thread_recieve(self):
+        log.debug('about to start read thread')
+        thread_read = threading.Thread(target=self.ws_read_from_backend_write_to_terminal)
+        thread_read.start()
+
+    def thread_transmit(self):
+        log.debug('about to start send thread')
+        thread_send = threading.Thread(target=self.ws_send_terminal_stdout_to_backend)
+        thread_send.start()
+
     async def gather(self):
-        await asyncio.gather(self.ws_read_from_backend_write_to_terminal(), self.ws_send_terminal_stdout_to_backend())
+        try:
+            await asyncio.gather(self.ws_read_from_backend_write_to_terminal(),
+                                 self.ws_send_terminal_stdout_to_backend())
+        except asyncio.TimeoutError:
+            log.debug('Timeout')
 
     def thread_f(self):
         try:
@@ -133,34 +166,34 @@ class RemoteTerminal:
             log.debug(f'_ws_connected={self._ws_connected}')
             self._ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
 
-            # @fixme: check if the file exists, and check if entry exist as the cert may be taken from ca-certificates
+            # @fixme: check if the file exists, and check if entry exist as the cert
+            # may be taken from ca-certificates
             if context.config.ServerCertificate:
-                self._ssl_context.load_verify_locations(context.config.ServerCertificate)
+                self._ssl_context.load_verify_locations(
+                    context.config.ServerCertificate)
             else:
                 self._ssl_context = ssl.create_default_context()
-
-
 
             # the JWT should already be acquired as we supposed to be in AuthorizedState
             self._ext_headers = {
                 'Authorization': 'Bearer ' + context.JWT
             }
 
-            # @fixme the following part needs to be moved "after the connection has been established"
+            # @fixme the following part needs to be moved
+            # "after the connection has been established"
 
             self._master, self._slave = pty.openpty()
 
-            # @fixme try another approach: instead of making the fd non-blocking run in a separate asyncio.to_thread (same fixme is in ws_send_termina_stdout_to_backend)
-            fl = fcntl.fcntl(self._master, fcntl.F_GETFL)
-            fcntl.fcntl(self._master, fcntl.F_SETFL, fl | os.O_NONBLOCK)
+            # @fixme try another approach: instead of making the fd non-blocking run in
+            # a separate asyncio.to_thread (same fixme is in ws_send_termina_stdout_to_backend)
+            fl_arg = fcntl.fcntl(self._master, fcntl.F_GETFL)
+            fcntl.fcntl(self._master, fcntl.F_SETFL, fl_arg)
 
             self._shell = subprocess.Popen(
                 [context.config.ShellCommand, "-i"], start_new_session=True,
                 stdin=self._slave, stdout=self._slave, stderr=self._slave)
-            self.background_ws_thread = threading.Thread(target=self.thread_f)
-            self.background_ws_thread.start()
+            #self.background_ws_thread = threading.Thread(target=self.thread_f)
+            #self.background_ws_thread.start()
+            self.thread_recieve()
+            self.thread_transmit()
             log.debug("i've just invoked the websocket thread")
-
-
-
-
