@@ -14,7 +14,6 @@
 
 import logging
 import asyncio
-import fcntl
 import os
 import pty
 import select
@@ -139,15 +138,15 @@ class RemoteTerminal:
         try:
             asyncio.run(self.ws_read_from_backend_write_to_terminal())
         except Exception as inst:
-            log.debug(f'in Run: {type(inst)}')
-            log.debug(f'in Run: {inst}')
+            log.debug(f'in thread_f_recieve: {type(inst)}')
+            log.debug(f'in thread_f_recieve: {inst}')
 
     def thread_f_transmit(self):
         try:
             asyncio.run(self.ws_send_terminal_stdout_to_backend())
         except Exception as inst:
-            log.debug(f'in Run: {type(inst)}')
-            log.debug(f'in Run: {inst}')
+            log.debug(f'in thread_f_transmit: {type(inst)}')
+            log.debug(f'in thread_f_transmit: {inst}')
 
     def thread_recieve(self):
         log.debug('about to start read thread')
