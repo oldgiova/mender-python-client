@@ -69,7 +69,7 @@ class RemoteTerminal:
 
     async def ws_send_terminal_stdout_to_backend(self):
         # wait for connection in another coroutine
-        # while not self._session_started and not self._hello_failed:
+        #while not self._session_started and not self._hello_failed:
         #    await asyncio.sleep(1)
         if self._hello_failed:
             log.debug('leaving ws_send_terminal_stdout_to_backend')
@@ -77,7 +77,7 @@ class RemoteTerminal:
         log.debug('going into clnt->bcknd loop')
         while True:
             try:
-                await asyncio.sleep(1)
+                #await asyncio.sleep(1)
                 data = os.read(self._master, 102400)
                 resp_header = {'proto': 1, 'typ': 'shell', 'sid': self._sid}
                 resp_props = {'status': 1}
@@ -135,14 +135,29 @@ class RemoteTerminal:
             log.debug(f'hello: {type(inst)}')
             log.debug(f'hello: {inst}')
 
+    def thread_f_recieve(self):
+        try:
+            asyncio.wait(asyncio.run(self.ws_read_from_backend_write_to_terminal()))
+        except Exception as inst:
+            log.debug(f'in Run: {type(inst)}')
+            log.debug(f'in Run: {inst}')
+
+    def thread_f_transmit(self):
+        try:
+            asyncio.wait(asyncio.run(self.ws_send_terminal_stdout_to_backend()))
+        except Exception as inst:
+            log.debug(f'in Run: {type(inst)}')
+            log.debug(f'in Run: {inst}')
+
+
     def thread_recieve(self):
         log.debug('about to start read thread')
-        thread_read = threading.Thread(target=self.ws_read_from_backend_write_to_terminal)
+        thread_read = threading.Thread(target=self.thread_f_recieve)
         thread_read.start()
 
     def thread_transmit(self):
         log.debug('about to start send thread')
-        thread_send = threading.Thread(target=self.ws_send_terminal_stdout_to_backend)
+        thread_send = threading.Thread(target=self.thread_f_transmit)
         thread_send.start()
 
     async def gather(self):
@@ -187,7 +202,7 @@ class RemoteTerminal:
             # @fixme try another approach: instead of making the fd non-blocking run in
             # a separate asyncio.to_thread (same fixme is in ws_send_termina_stdout_to_backend)
             fl_arg = fcntl.fcntl(self._master, fcntl.F_GETFL)
-            fcntl.fcntl(self._master, fcntl.F_SETFL, fl_arg)
+            fcntl.fcntl(self._master, fcntl.F_SETFL, fl_arg | os.O_NONBLOCK)
 
             self._shell = subprocess.Popen(
                 [context.config.ShellCommand, "-i"], start_new_session=True,
