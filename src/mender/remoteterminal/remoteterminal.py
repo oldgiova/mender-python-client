@@ -84,7 +84,7 @@ class RemoteTerminal:
                 response = {'hdr': resp_header,
                             'props': resp_props, 'body': data}
                 #log.debug(f'resp: {response}')
-                await self._client.send(msgpack.packb(response))
+                await self._client.send(msgpack.packb(response, use_bin_type=True))
                 log.debug('data sent')
 
                 # @fixme try another approach: instead of making the fd non-blocking
@@ -108,9 +108,8 @@ class RemoteTerminal:
         try:
             while True:
                 log.debug('about to waiting for msg from backend')
-                greeting = await self._client.recv()
-                msg: dict = msgpack.unpackb(greeting)
-                log.debug(f'msg: {msg}')
+                packed_msg = await self._client.recv()
+                msg: dict = msgpack.unpackb(packed_msg, raw=False)
                 hdr = msg['hdr']
                 if hdr['typ'] == 'new':
                     self._sid = hdr['sid']
@@ -124,14 +123,14 @@ class RemoteTerminal:
                             os.write(stream, msg['body'])
                             # os.write(stream, 'ls\n'.encode('utf-8'))
                         except Exception as ex_instance:
-                            log.debug(
+                            log.error(
                                 f'while writing to master: {type(ex_instance)}')
-                            log.debug(
+                            log.error(
                                 f'while writing to master: {ex_instance}')
 
         except Exception as inst:
-            log.debug(f'hello: {type(inst)}')
-            log.debug(f'hello: {inst}')
+            log.error(f'hello: {type(inst)}')
+            log.error(f'hello: {inst}')
 
     async def gather(self):
         try:
@@ -145,8 +144,8 @@ class RemoteTerminal:
             log.debug('about to run asyncio.gather')
             asyncio.run(self.gather())
         except Exception as inst:
-            log.debug(f'in Run: {type(inst)}')
-            log.debug(f'in Run: {inst}')
+            log.error(f'in Run: {type(inst)}')
+            log.error(f'in Run: {inst}')
 
     def run(self, context):
         self._context = context
