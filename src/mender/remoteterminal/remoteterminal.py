@@ -128,7 +128,7 @@ class RemoteTerminal:
 
     def run(self, context):
         self._context = context
-        if context.config.RemoteTerminal and context.authorized and not self._ws_connected:
+        if context.remoteTerminalConfig.RemoteTerminal and context.authorized and not self._ws_connected:
             log.debug(f'_ws_connected={self._ws_connected}')
             self._ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
 

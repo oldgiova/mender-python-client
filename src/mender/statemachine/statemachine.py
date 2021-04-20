@@ -80,6 +80,18 @@ class Init:
             context.config.UpdatePollIntervalSeconds
         )
         context.retry_timer = timeutil.IsItTime(context.config.RetryPollIntervalSeconds)
+        log.info("Try to load configuration for remote terminal")
+        try:
+            context.remoteTerminalConfig = config.load(
+                global_path = settings.PATHS.remote_terminal_conf,
+                local_path = '',
+            )
+            log.info(f"Loaded configuration: {context.remoteTerminalConfig}")
+        except config.NoConfigurationFileError:
+            log.error(
+                "No configuration files for remote terminal found for the device."
+                "Most likely, the remote terminal will not be functional."
+            )
         log.debug(f"Init set context to: {context}")
         return context
 

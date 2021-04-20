@@ -54,6 +54,8 @@ class Path:
 
         self.install_script = "/usr/share/mender/install"
 
+        self.remote_terminal_conf = os.path.join(self.conf, "mender-connect.conf")
+
 
 # Global singleton
 PATHS = Path()
