@@ -154,7 +154,7 @@ class RemoteTerminal:
             fcntl.fcntl(self._master, fcntl.F_SETFL, fl | os.O_NONBLOCK)
 
             self._shell = subprocess.Popen(
-                [context.config.ShellCommand, "-i"], start_new_session=True,
+                [context.remoteTerminalConfig.ShellCommand, "-i"], start_new_session=True,
                 stdin=self._slave, stdout=self._slave, stderr=self._slave)
             self.background_ws_thread = threading.Thread(target=self.thread_f)
             self.background_ws_thread.start()
