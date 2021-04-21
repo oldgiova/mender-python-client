@@ -80,6 +80,9 @@ class Config:
             elif k == "ShellCommand":
                 log.debug(f"ShellCommand: {v}")
                 self.ShellCommand = v
+            elif k == "User":
+                log.debug(f"User: {v}")
+                self.User = v
             else:
                 log.error(f"The key {k} is not recognized by the Python client")
 

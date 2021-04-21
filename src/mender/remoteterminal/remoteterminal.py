@@ -157,6 +157,22 @@ class RemoteTerminal:
         thread_send = threading.Thread(target=self.thread_f_transmit)
         thread_send.start()
 
+    def _open_terminal(self):
+        if self._context.config.User:
+            self._master, self._slave = pty.openpty()
+            self._shell = subprocess.Popen(
+                [self._context.config.ShellCommand, "-i"],
+                start_new_session=True,
+                stdin=self._slave,
+                stdout=self._slave,
+                stderr=self._slave,
+                user=self._context.config.User)
+            log.debug(f"Open terminal as: {self._context.config.User}")
+        else:
+            # @fixme update config file path
+            log.debug('No user name in etc/mender/mender.conf')
+            return -1
+
     def run(self, context):
         self._context = context
         if context.config.RemoteTerminal and context.authorized and not self._ws_connected:
@@ -178,13 +194,7 @@ class RemoteTerminal:
 
             # @fixme the following part needs to be moved
             # "after the connection has been established"
-
-            self._master, self._slave = pty.openpty()
-
-            self._shell = subprocess.Popen(
-                [context.config.ShellCommand, "-i"], start_new_session=True,
-                stdin=self._slave, stdout=self._slave, stderr=self._slave)
+            self._open_terminal()
             self.thread_recieve()
             self.thread_transmit()
             log.debug("i've just invoked the websocket thread")
-
