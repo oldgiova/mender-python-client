@@ -20,6 +20,7 @@ import select
 import ssl
 import subprocess
 import threading
+import signal
 
 import msgpack
 import websockets
@@ -49,7 +50,6 @@ class RemoteTerminal:
         self._master = None
         self._slave = None
         self._shell = None
-        self.background_ws_thread = None
 
     async def ws_connect(self):
         # from context we receive sth like: "ServerURL": "https://docker.mender.io"
@@ -85,10 +85,6 @@ class RemoteTerminal:
                 #log.debug(f'resp: {response}')
                 await self._client.send(msgpack.packb(response, use_bin_type=True))
                 log.debug('data sent')
-
-                # @fixme try another approach: instead of making the fd non-blocking
-                # run in a separate asyncio.to_thread
-                # (same fixme is down there)
             except Exception as ex_instance:
                 pass    # @fixme those execption are catched all the time due to non-blocking,
                 # commented out for keeping the output tidier for testing
@@ -115,6 +111,9 @@ class RemoteTerminal:
                 if hdr['typ'] == 'new':
                     self._sid = hdr['sid']
                     self._session_started = True
+                    self._open_terminal()
+                    self.thread_transmit()
+                    #self.thread_read.start()
                 if hdr['typ'] == 'shell':
                     log.debug('waiting for _master for writing')
                     _, ready, _, = select.select([], [self._master], [])
@@ -128,6 +127,13 @@ class RemoteTerminal:
                                 f'while writing to master: {type(ex_instance)}')
                             log.error(
                                 f'while writing to master: {ex_instance}')
+                if hdr['typ'] == 'stop':
+                    log.debug('close terminal msg')
+                    #os.killpg(os.getpgid(self._shell.pid), signal.SIGTERM)
+                    self._shell.kill()
+                    self._master = None
+                    self._slave = None
+                    #self.thread_send.kill()
 
         except Exception as inst:
             log.error(f'hello: {type(inst)}')
@@ -192,7 +198,6 @@ class RemoteTerminal:
 
             # @fixme the following part needs to be moved
             # "after the connection has been established"
-            self._open_terminal()
+
             self.thread_recieve()
-            self.thread_transmit()
             log.debug("i've just invoked the websocket thread")
