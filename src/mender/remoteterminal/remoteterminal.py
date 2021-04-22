@@ -79,7 +79,7 @@ class RemoteTerminal:
                 packed_msg = await self._client.recv()
                 msg: dict = msgpack.unpackb(packed_msg, raw=False)
                 hdr = msg['hdr']
-                if hdr['typ'] == 'new':
+                if hdr['typ'] == 'new' and not self._session_started:
                     self._sid = hdr['sid']
                     self._session_started = True
                     self._open_terminal()
@@ -93,6 +93,7 @@ class RemoteTerminal:
                     self._shell.kill()
                     self._master = None
                     self._slave = None
+                    self._session_started = False
                     # self.thread_send.join()
 
         except Exception as inst:
@@ -137,12 +138,12 @@ class RemoteTerminal:
                 log.error(f'hello: {type(inst)}')
                 log.error(f'hello: {inst}')
 
-    def thread_f_recieve(self):
-        try:
-            asyncio.run(self.ws_read_from_backend_write_to_terminal())
-        except Exception as inst:
-            log.debug(f'in thread_f_recieve: {type(inst)}')
-            log.debug(f'in thread_f_recieve: {inst}')
+    #def thread_f_recieve(self):
+    #    try:
+    #        asyncio.run(self.ws_read_from_backend_write_to_terminal())
+    #    except Exception as inst:
+    #        log.debug(f'in thread_f_recieve: {type(inst)}')
+    #        log.debug(f'in thread_f_recieve: {inst}')
 
     def thread_f_transmit(self):
         try:
@@ -158,10 +159,10 @@ class RemoteTerminal:
             log.error(f'in thread_f_transmit: {type(inst)}')
             log.error(f'in thread_f_transmit: {inst}')
 
-    def _thread_recieve(self):
-        log.debug('about to start read thread')
-        thread_read = threading.Thread(target=self.thread_f_recieve)
-        thread_read.start()
+    #def _thread_recieve(self):
+    #    log.debug('about to start read thread')
+    #    thread_read = threading.Thread(target=self.thread_f_recieve)
+    #    thread_read.start()
 
     def _thread_transmit(self):
         log.debug('about to start send thread')
