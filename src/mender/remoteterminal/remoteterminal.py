@@ -20,7 +20,6 @@ import select
 import ssl
 import subprocess
 import threading
-#import signal
 
 import msgpack
 import websockets
@@ -42,8 +41,6 @@ class RemoteTerminal:
         self._ws_connected = False
         self._hello_failed = False
         self._context = None
-        # started by a protocol msg "new", ended (set back to False) after a protocol msg "end"
-        # @fixme
         self._session_started = False
         self._ext_headers = None
         self._ssl_context = None
@@ -84,7 +81,6 @@ class RemoteTerminal:
                     self._session_started = True
                     self._open_terminal()
                     self._thread_transmit()
-                    # self.thread_read.start()
                 if hdr['typ'] == 'shell':
                     self.ws_read_from_backend_write_to_terminal(msg)
                 if hdr['typ'] == 'stop':
@@ -94,7 +90,6 @@ class RemoteTerminal:
                     self._master = None
                     self._slave = None
                     self._session_started = False
-                    # self.thread_send.join()
 
         except Exception as inst:
             log.error(f'hello: {type(inst)}')
@@ -104,7 +99,6 @@ class RemoteTerminal:
         if self._hello_failed:
             log.debug('leaving ws_send_terminal_stdout_to_backend')
             return -1
-        log.debug('going into clnt->bcknd loop')
         while True:
             try:
                 data = os.read(self._master, 102400)
@@ -138,13 +132,6 @@ class RemoteTerminal:
                 log.error(f'hello: {type(inst)}')
                 log.error(f'hello: {inst}')
 
-    #def thread_f_recieve(self):
-    #    try:
-    #        asyncio.run(self.ws_read_from_backend_write_to_terminal())
-    #    except Exception as inst:
-    #        log.debug(f'in thread_f_recieve: {type(inst)}')
-    #        log.debug(f'in thread_f_recieve: {inst}')
-
     def thread_f_transmit(self):
         try:
             asyncio.run(self.ws_send_terminal_stdout_to_backend())
@@ -159,33 +146,31 @@ class RemoteTerminal:
             log.error(f'in thread_f_transmit: {type(inst)}')
             log.error(f'in thread_f_transmit: {inst}')
 
-    #def _thread_recieve(self):
-    #    log.debug('about to start read thread')
-    #    thread_read = threading.Thread(target=self.thread_f_recieve)
-    #    thread_read.start()
-
     def _thread_transmit(self):
         log.debug('about to start send thread')
         thread_send = threading.Thread(target=self.thread_f_transmit)
         thread_send.start()
 
     def _background_thread_ws(self):
-        log.debug('about to start naver ending thread, websocket connection')
+        log.debug('about to start never ending thread, websocket connection')
         thread_ws = threading.Thread(target=self.thread_f_ws)
         thread_ws.start()
 
     def _open_terminal(self):
         user = 'nobody'
-        if user := self._context.remoteTerminalConfig.User:
-            pass
+        #if user := self._context.remoteTerminalConfig.User:
+        #    pass
         self._master, self._slave = pty.openpty()
         self._shell = subprocess.Popen(
+            #@fixme shell could be fixed value
             [self._context.config.ShellCommand, "-i"],
             start_new_session=True,
             stdin=self._slave,
             stdout=self._slave,
-            stderr=self._slave,
-            user=self._context.remoteTerminalConfig.User)
+            stderr=self._slave
+            #user=user
+            #default user is: root
+        )
         log.debug(f"Open terminal as: {user}")
 
     def run(self, context):
@@ -194,8 +179,6 @@ class RemoteTerminal:
             log.debug(f'_ws_connected={self._ws_connected}')
             self._ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
 
-            # @fixme: check if the file exists, and check if entry exist as the cert
-            # may be taken from ca-certificates
             if context.config.ServerCertificate:
                 self._ssl_context.load_verify_locations(
                     context.config.ServerCertificate)
