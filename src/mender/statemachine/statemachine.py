@@ -263,9 +263,7 @@ class IdleStateMachine(AuthorizedStateMachine):
 
     def run(self, context):
         while context.authorized:
-            log.debug("about to: remote_terminal.run(context)")
             self.remote_terminal.run(context)
-            log.debug("just after: remote_terminal.run(context)")
             self.sync_inventory.run(context)
             if self.sync_update.run(context):
                 # Update available

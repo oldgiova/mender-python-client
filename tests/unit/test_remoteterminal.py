@@ -22,7 +22,7 @@ import mender.remoteterminal.remoteterminal as rt
 @pytest.fixture
 def params():
     testInstance = rt.RemoteTerminal()
-    testInstance._client = "websocket.test"
+    testInstance.client = "websocket.test"
     #xtestInstance._context.config.ServerURL = "https://docker.mender.io"
     return testInstance
 

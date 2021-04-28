@@ -24,7 +24,15 @@ import threading
 import msgpack
 import websockets
 
+from websockets.exceptions import WebSocketException
+
 log = logging.getLogger(__name__)
+
+#mender-connect protocol messeges, taken from:
+#/mendersoftware/go-lib-micro/ws/shell/model.go
+MESSAGE_TYPE_SHELL_COMMAND = 'shell'
+MESSAGE_TYPE_SPAWN_SHELL   = 'new'
+MESSAGE_TYPE_STOP_SHELL    = 'stop'
 
 
 class RemoteTerminal:
@@ -33,162 +41,147 @@ class RemoteTerminal:
         serves single or many concurrent connections (next release?)
     """
 
-    def __init__(self):
-        log.debug("RemoteTerminal initialized")
 
-        self._client = None
-        self._sid = None
-        self._ws_connected = False
-        self._hello_failed = False
-        self._context = None
-        self._session_started = False
-        self._ext_headers = None
-        self._ssl_context = None
-        self._master = None
-        self._slave = None
-        self._shell = None
+
+    def __init__(self):
+        log.info("RemoteTerminal initialized")
+
+        self.client = None
+        self.sid = None
+        self.ws_connected = False
+        self.context = None
+        self.session_started = False
+        self.ext_headers = None
+        self.ssl_context = None
+        self.master = None
+        self.slave = None
+        self.shell = None
 
     async def ws_connect(self):
-        # from context we receive sth like: "ServerURL": "https://docker.mender.io"
-        # we need replace the protcol and API entry point to achive like:
+        '''connects to backed websocket server'''
+
+        # from config we receive sth like: "ServerURL": "https://docker.mender.io"
+        # we need replace the protcol and API entry point to achive like this:
         # "wss://docker.mender.io/api/devices/v1/deviceconnect/connect"
-        uri = self._context.config.ServerURL.replace(
+        uri = self.context.config.ServerURL.replace(
             "https", "wss") + "/api/devices/v1/deviceconnect/connect"
         try:
-            self._client = await websockets.connect(
-                uri, ssl=self._ssl_context, extra_headers=self._ext_headers)
-            self._ws_connected = True
-            log.debug(f'connected: {self._client}')
-        except Exception as inst:
-            log.debug(f'ws_connect: {type(inst)}')
-            log.debug(f'ws_connect: {inst}')
+            self.client = await websockets.connect(
+                uri, ssl=self.ssl_context, extra_headers=self.ext_headers)
+            self.ws_connected = True
+            log.debug(f'connected to: {uri}')
+        except WebSocketException as ws_exception:
+            log.error(f'ws_connect: {ws_exception}')
 
-    async def ws_listener_background(self):
+    async def proto_msg_processor(self):
+        '''after having connected to the backend it processes the protocol messages'''
+
         await self.ws_connect()
-        if self._client is None:
-            self._hello_failed = True
+        if self.client is None:
             log.debug('Websocket connection failed')
             return -1
         log.debug('Websocket connected')
         try:
             while True:
-                log.debug('about to waiting for msg from backend')
-                packed_msg = await self._client.recv()
+                packed_msg = await self.client.recv()
                 msg: dict = msgpack.unpackb(packed_msg, raw=False)
                 hdr = msg['hdr']
-                if hdr['typ'] == 'new' and not self._session_started:
-                    self._sid = hdr['sid']
-                    self._session_started = True
-                    self._open_terminal()
-                    self._thread_transmit()
-                if hdr['typ'] == 'shell':
-                    self.ws_read_from_backend_write_to_terminal(msg)
-                if hdr['typ'] == 'stop':
-                    log.debug('close terminal msg')
-                    # os.killpg(os.getpgid(self._shell.pid), signal.SIGTERM)
-                    self._shell.kill()
-                    self._master = None
-                    self._slave = None
-                    self._session_started = False
+                if hdr['typ'] == MESSAGE_TYPE_SPAWN_SHELL and not self.session_started:
+                    self.sid = hdr['sid']
+                    self.session_started = True
+                    self.open_terminal()
+                    self.start_transmitting_thread()
+                if hdr['typ'] == MESSAGE_TYPE_SHELL_COMMAND:
+                    self.write_command_to_shell(msg)
+                if hdr['typ'] == MESSAGE_TYPE_STOP_SHELL:
+                    self.shell.kill()
+                    self.master = None
+                    self.slave = None
+                    self.session_started = False
 
-        except Exception as inst:
-            log.error(f'hello: {type(inst)}')
-            log.error(f'hello: {inst}')
+        except WebSocketException as ws_exception:
+            log.error(f'proto_msg_processor: {ws_exception}')
 
-    async def ws_send_terminal_stdout_to_backend(self):
-        if self._hello_failed:
-            log.debug('leaving ws_send_terminal_stdout_to_backend')
+    async def send_terminal_stdout_to_backend(self):
+        '''reads the data from the shell's stdout descriptor, packs into the protocol msg
+        and send to the backend'''
+
+        if not self.ws_connected:
+            log.debug('leaving send_terminal_stdout_to_backend')
             return -1
         while True:
             try:
-                data = os.read(self._master, 102400)
-                resp_header = {'proto': 1, 'typ': 'shell', 'sid': self._sid}
+                data = os.read(self.master, 102400)
+                resp_header = {'proto': 1, 'typ': MESSAGE_TYPE_SHELL_COMMAND, 'sid': self.sid}
                 resp_props = {'status': 1}
                 response = {'hdr': resp_header,
                             'props': resp_props, 'body': data}
-                # log.debug(f'resp: {response}')
-                await self._client.send(msgpack.packb(response, use_bin_type=True))
+                await self.client.send(msgpack.packb(response, use_bin_type=True))
                 log.debug('data sent')
-            except Exception as ex_instance:
-                pass    # @fixme those execption are catched all the time due to non-blocking,
-                # commented out for keeping the output tidier for testing
-                # log.debug(f'send_stdout: {type(ex_instance)}')
-                # log.debug(f'send_stdout: {ex_instance}')
+            except TypeError as type_error:
+                log.error(type_error)
+            except IOError as io_error:
+                log.error(f'send_stdout: {io_error}')
 
-    def ws_read_from_backend_write_to_terminal(self, msg):
-        log.debug('waiting for _master for writing')
-        _, ready, _, = select.select([], [self._master], [])
+    def write_command_to_shell(self, msg):
+        '''writes the command to the shell's stdin file descriptor'''
+
+        _, ready, _, = select.select([], [self.master], [])
         for stream in ready:
-            log.debug('stream in _master READY for WRITING')
             try:
                 os.write(stream, msg['body'])
-                # os.write(stream, 'ls\n'.encode('utf-8'))
-            except Exception as ex_instance:
-                log.error(
-                    f'while writing to master: {type(ex_instance)}')
-                log.error(
-                    f'while writing to master: {ex_instance}')
-            except Exception as inst:
-                log.error(f'hello: {type(inst)}')
-                log.error(f'hello: {inst}')
+            except IOError as io_error:
+                log.error(f'while writing to master: {io_error}')
 
     def thread_f_transmit(self):
         try:
-            asyncio.run(self.ws_send_terminal_stdout_to_backend())
+            asyncio.run(self.send_terminal_stdout_to_backend())
         except Exception as inst:
-            log.error(f'in thread_f_transmit: {type(inst)}')
             log.error(f'in thread_f_transmit: {inst}')
 
     def thread_f_ws(self):
         try:
-            asyncio.run(self.ws_listener_background())
+            asyncio.run(self.proto_msg_processor())
         except Exception as inst:
-            log.error(f'in thread_f_transmit: {type(inst)}')
-            log.error(f'in thread_f_transmit: {inst}')
+            log.error(f'in thread_f_ws: {inst}')
 
-    def _thread_transmit(self):
+    def start_transmitting_thread(self):
         log.debug('about to start send thread')
         thread_send = threading.Thread(target=self.thread_f_transmit)
         thread_send.start()
 
-    def _background_thread_ws(self):
+    def run_main_working_thread(self):
         log.debug('about to start never ending thread, websocket connection')
         thread_ws = threading.Thread(target=self.thread_f_ws)
         thread_ws.start()
 
-    def _open_terminal(self):
-        user = 'nobody'
-        #if user := self._context.remoteTerminalConfig.User:
-        #    pass
-        self._master, self._slave = pty.openpty()
-        self._shell = subprocess.Popen(
-            #@fixme shell could be fixed value
-            [self._context.config.ShellCommand, "-i"],
+    def open_terminal(self):
+        '''opens new pty/tty, invokes the new shell and connects them'''
+        self.master, self.slave = pty.openpty()
+        #by default the shell owner is root
+        self.shell = subprocess.Popen(
+            [self.context.config.ShellCommand, "-i"],
             start_new_session=True,
-            stdin=self._slave,
-            stdout=self._slave,
-            stderr=self._slave
-            #user=user
-            #default user is: root
+            stdin=self.slave,
+            stdout=self.slave,
+            stderr=self.slave
         )
-        log.debug(f"Open terminal as: {user}")
 
     def run(self, context):
-        self._context = context
-        if context.remoteTerminalConfig.RemoteTerminal and context.authorized and not self._ws_connected:
-            log.debug(f'_ws_connected={self._ws_connected}')
-            self._ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        self.context = context
+        if context.remoteTerminalConfig.RemoteTerminal and context.authorized and not self.ws_connected:
+            self.ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
 
             if context.config.ServerCertificate:
-                self._ssl_context.load_verify_locations(
+                self.ssl_context.load_verify_locations(
                     context.config.ServerCertificate)
             else:
-                self._ssl_context = ssl.create_default_context()
+                self.ssl_context = ssl.create_default_context()
 
             # the JWT should already be acquired as we supposed to be in AuthorizedState
-            self._ext_headers = {
+            self.ext_headers = {
                 'Authorization': 'Bearer ' + context.JWT
             }
 
-            self._background_thread_ws()
+            self.run_main_working_thread()
             log.debug("i've just invoked the websocket thread")
