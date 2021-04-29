@@ -20,10 +20,8 @@ import select
 import ssl
 import subprocess
 import threading
-
 import msgpack
 import websockets
-
 from websockets.exceptions import WebSocketException
 
 log = logging.getLogger(__name__)
@@ -36,12 +34,10 @@ MESSAGE_TYPE_STOP_SHELL    = 'stop'
 
 
 class RemoteTerminal:
-    """ This class serves the RemoteTerminal aka remote shell feature
+    """ This class serves the RemoteTerminal aka a remote shell feature
         over the WebSocket. This supposed to be the only instance and
-        serves single or many concurrent connections (next release?)
+        serves single connection
     """
-
-
 
     def __init__(self):
         log.info("RemoteTerminal initialized")
@@ -57,8 +53,9 @@ class RemoteTerminal:
         self.slave = None
         self.shell = None
 
+
     async def ws_connect(self):
-        '''connects to backed websocket server'''
+        '''connects to the backend websocket server.'''
 
         # from config we receive sth like: "ServerURL": "https://docker.mender.io"
         # we need replace the protcol and API entry point to achive like this:
@@ -73,8 +70,10 @@ class RemoteTerminal:
         except WebSocketException as ws_exception:
             log.error(f'ws_connect: {ws_exception}')
 
+
     async def proto_msg_processor(self):
-        '''after having connected to the backend it processes the protocol messages'''
+        '''after having connected to the backend it processes the protocol messages.
+        This function is called in a thread.'''
 
         await self.ws_connect()
         if self.client is None:
@@ -102,26 +101,28 @@ class RemoteTerminal:
         except WebSocketException as ws_exception:
             log.error(f'proto_msg_processor: {ws_exception}')
 
+
     async def send_terminal_stdout_to_backend(self):
         '''reads the data from the shell's stdout descriptor, packs into the protocol msg
-        and send to the backend'''
+        and sends to the backend.
+        This function is called in a thread.'''
 
         if not self.ws_connected:
             log.debug('leaving send_terminal_stdout_to_backend')
             return -1
         while True:
             try:
-                data = os.read(self.master, 102400)
+                shell_stdout = os.read(self.master, 102400)
                 resp_header = {'proto': 1, 'typ': MESSAGE_TYPE_SHELL_COMMAND, 'sid': self.sid}
                 resp_props = {'status': 1}
                 response = {'hdr': resp_header,
-                            'props': resp_props, 'body': data}
+                            'props': resp_props, 'body': shell_stdout}
                 await self.client.send(msgpack.packb(response, use_bin_type=True))
-                log.debug('data sent')
             except TypeError as type_error:
-                log.error(type_error)
+                log.error(f'send_terminal_stdout_to_backend: {type_error}')
             except IOError as io_error:
-                log.error(f'send_stdout: {io_error}')
+                log.error(f'send_terminal_stdout_to_backend: {io_error}')
+
 
     def write_command_to_shell(self, msg):
         '''writes the command to the shell's stdin file descriptor'''
@@ -131,29 +132,26 @@ class RemoteTerminal:
             try:
                 os.write(stream, msg['body'])
             except IOError as io_error:
-                log.error(f'while writing to master: {io_error}')
+                log.error(f'write_command_to_shell: {io_error}')
 
-    def thread_f_transmit(self):
-        try:
-            asyncio.run(self.send_terminal_stdout_to_backend())
-        except Exception as inst:
-            log.error(f'in thread_f_transmit: {inst}')
-
-    def thread_f_ws(self):
-        try:
-            asyncio.run(self.proto_msg_processor())
-        except Exception as inst:
-            log.error(f'in thread_f_ws: {inst}')
 
     def start_transmitting_thread(self):
-        log.debug('about to start send thread')
-        thread_send = threading.Thread(target=self.thread_f_transmit)
+        '''starts transmitting thread'''
+
+        log.debug('about to start transmitting thread')
+        thread_send = threading.Thread(
+            target=lambda: asyncio.run(self.send_terminal_stdout_to_backend()))
         thread_send.start()
 
-    def run_main_working_thread(self):
-        log.debug('about to start never ending thread, websocket connection')
-        thread_ws = threading.Thread(target=self.thread_f_ws)
+
+    def run_msg_processor_thread(self):
+        '''starts the protocol messages thread'''
+
+        log.debug('about to start msg processor thread')
+        thread_ws = threading.Thread(
+            target=lambda: asyncio.run(self.proto_msg_processor()))
         thread_ws.start()
+
 
     def open_terminal(self):
         '''opens new pty/tty, invokes the new shell and connects them'''
@@ -167,21 +165,26 @@ class RemoteTerminal:
             stderr=self.slave
         )
 
+
     def run(self, context):
+        '''the main entry point for running the whole functionality. Supposed to be run
+        after the device has authorized and JWT token obtained. '''
+
         self.context = context
-        if context.remoteTerminalConfig.RemoteTerminal and context.authorized and not self.ws_connected:
-            self.ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        if context.remoteTerminalConfig.RemoteTerminal:
+            if context.authorized and not self.ws_connected:
+                self.ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
 
-            if context.config.ServerCertificate:
-                self.ssl_context.load_verify_locations(
-                    context.config.ServerCertificate)
-            else:
-                self.ssl_context = ssl.create_default_context()
+                if context.config.ServerCertificate:
+                    self.ssl_context.load_verify_locations(
+                        context.config.ServerCertificate)
+                else:
+                    self.ssl_context = ssl.create_default_context()
 
-            # the JWT should already be acquired as we supposed to be in AuthorizedState
-            self.ext_headers = {
-                'Authorization': 'Bearer ' + context.JWT
-            }
+                # the JWT should already be acquired as we supposed to be in AuthorizedState
+                self.ext_headers = {
+                    'Authorization': 'Bearer ' + context.JWT
+                }
 
-            self.run_main_working_thread()
-            log.debug("i've just invoked the websocket thread")
+                self.run_msg_processor_thread()
+                log.debug("The websocket msg processor started.")
