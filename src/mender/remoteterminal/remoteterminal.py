@@ -167,7 +167,10 @@ class RemoteTerminal:
 
 
     def load_server_certificate(self):
-        '''try to load SSL certificate from config file else create default'''
+        '''tries to load SSL certificate from config file
+    
+        and if not found then creates default context based on CAs'''
+
         self.ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
         if self.context.config.ServerCertificate:
             self.ssl_context.load_verify_locations(
@@ -194,4 +197,4 @@ class RemoteTerminal:
 
                 self.run_msg_processor_thread()
                 log.debug("The websocket msg processor started.")
-                
+
