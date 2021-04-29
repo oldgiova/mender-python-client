@@ -26,11 +26,11 @@ from websockets.exceptions import WebSocketException
 
 log = logging.getLogger(__name__)
 
-# mender-connect protocol messeges, taken from:
-# /mendersoftware/go-lib-micro/ws/shell/model.go
+#mender-connect protocol messeges, taken from:
+#/mendersoftware/go-lib-micro/ws/shell/model.go
 MESSAGE_TYPE_SHELL_COMMAND = 'shell'
-MESSAGE_TYPE_SPAWN_SHELL = 'new'
-MESSAGE_TYPE_STOP_SHELL = 'stop'
+MESSAGE_TYPE_SPAWN_SHELL   = 'new'
+MESSAGE_TYPE_STOP_SHELL    = 'stop'
 
 
 class RemoteTerminal:
@@ -53,6 +53,7 @@ class RemoteTerminal:
         self.slave = None
         self.shell = None
 
+
     async def ws_connect(self):
         '''connects to the backend websocket server.'''
 
@@ -68,6 +69,7 @@ class RemoteTerminal:
             log.debug(f'connected to: {uri}')
         except WebSocketException as ws_exception:
             log.error(f'ws_connect: {ws_exception}')
+
 
     async def proto_msg_processor(self):
         '''after having connected to the backend it processes the protocol messages.
@@ -99,6 +101,7 @@ class RemoteTerminal:
         except WebSocketException as ws_exception:
             log.error(f'proto_msg_processor: {ws_exception}')
 
+
     async def send_terminal_stdout_to_backend(self):
         '''reads the data from the shell's stdout descriptor, packs into the protocol msg
         and sends to the backend.
@@ -110,8 +113,7 @@ class RemoteTerminal:
         while True:
             try:
                 shell_stdout = os.read(self.master, 102400)
-                resp_header = {
-                    'proto': 1, 'typ': MESSAGE_TYPE_SHELL_COMMAND, 'sid': self.sid}
+                resp_header = {'proto': 1, 'typ': MESSAGE_TYPE_SHELL_COMMAND, 'sid': self.sid}
                 resp_props = {'status': 1}
                 response = {'hdr': resp_header,
                             'props': resp_props, 'body': shell_stdout}
@@ -120,6 +122,7 @@ class RemoteTerminal:
                 log.error(f'send_terminal_stdout_to_backend: {type_error}')
             except IOError as io_error:
                 log.error(f'send_terminal_stdout_to_backend: {io_error}')
+
 
     def write_command_to_shell(self, msg):
         '''writes the command to the shell's stdin file descriptor'''
@@ -131,6 +134,7 @@ class RemoteTerminal:
             except IOError as io_error:
                 log.error(f'write_command_to_shell: {io_error}')
 
+
     def start_transmitting_thread(self):
         '''starts transmitting thread'''
 
@@ -138,6 +142,7 @@ class RemoteTerminal:
         thread_send = threading.Thread(
             target=lambda: asyncio.run(self.send_terminal_stdout_to_backend()))
         thread_send.start()
+
 
     def run_msg_processor_thread(self):
         '''starts the protocol messages thread'''
@@ -147,10 +152,11 @@ class RemoteTerminal:
             target=lambda: asyncio.run(self.proto_msg_processor()))
         thread_ws.start()
 
+
     def open_terminal(self):
         '''opens new pty/tty, invokes the new shell and connects them'''
         self.master, self.slave = pty.openpty()
-        # by default the shell owner is root
+        #by default the shell owner is root
         self.shell = subprocess.Popen(
             [self.context.config.ShellCommand, "-i"],
             start_new_session=True,
@@ -158,6 +164,7 @@ class RemoteTerminal:
             stdout=self.slave,
             stderr=self.slave
         )
+
 
     def load_server_certificate(self):
         '''try to load SSL certificate from config file else create default'''
@@ -168,6 +175,7 @@ class RemoteTerminal:
         else:
             self.ssl_context = ssl.create_default_context()
 
+
     def run(self, context):
         '''the main entry point for running the whole functionality. Supposed to be run
         after the device has authorized and JWT token obtained. '''
@@ -175,6 +183,7 @@ class RemoteTerminal:
         self.context = context
         if context.remoteTerminalConfig.RemoteTerminal:
             if context.authorized and not self.ws_connected:
+                self.ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
 
                 self.load_server_certificate()
 
@@ -185,3 +194,4 @@ class RemoteTerminal:
 
                 self.run_msg_processor_thread()
                 log.debug("The websocket msg processor started.")
+                
