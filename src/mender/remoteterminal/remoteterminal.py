@@ -166,6 +166,16 @@ class RemoteTerminal:
         )
 
 
+    def load_server_certificate(self):
+        '''try to load SSL certificate from config file else create default'''
+        self.ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        if self.context.config.ServerCertificate:
+            self.ssl_context.load_verify_locations(
+                self.context.config.ServerCertificate)
+        else:
+            self.ssl_context = ssl.create_default_context()
+
+
     def run(self, context):
         '''the main entry point for running the whole functionality. Supposed to be run
         after the device has authorized and JWT token obtained. '''
@@ -175,11 +185,7 @@ class RemoteTerminal:
             if context.authorized and not self.ws_connected:
                 self.ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
 
-                if context.config.ServerCertificate:
-                    self.ssl_context.load_verify_locations(
-                        context.config.ServerCertificate)
-                else:
-                    self.ssl_context = ssl.create_default_context()
+                self.load_server_certificate()
 
                 # the JWT should already be acquired as we supposed to be in AuthorizedState
                 self.ext_headers = {
@@ -188,3 +194,4 @@ class RemoteTerminal:
 
                 self.run_msg_processor_thread()
                 log.debug("The websocket msg processor started.")
+                
