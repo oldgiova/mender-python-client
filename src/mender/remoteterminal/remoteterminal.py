@@ -88,6 +88,7 @@ class RemoteTerminal:
                 if hdr['typ'] == MESSAGE_TYPE_SPAWN_SHELL and not self.session_started:
                     self.sid = hdr['sid']
                     self.session_started = True
+                    await self.send_client_status_to_backend(MESSAGE_TYPE_SPAWN_SHELL)
                     self.open_terminal()
                     self.start_transmitting_thread()
                 if hdr['typ'] == MESSAGE_TYPE_SHELL_COMMAND:
@@ -96,6 +97,7 @@ class RemoteTerminal:
                     self.shell.kill()
                     self.master = None
                     self.slave = None
+                    await self.send_client_status_to_backend(MESSAGE_TYPE_STOP_SHELL)
                     self.session_started = False
 
         except WebSocketException as ws_exception:
@@ -122,6 +124,21 @@ class RemoteTerminal:
                 log.error(f'send_terminal_stdout_to_backend: {type_error}')
             except IOError as io_error:
                 log.error(f'send_terminal_stdout_to_backend: {io_error}')
+
+    async def send_client_status_to_backend(self, status):
+        '''send connection status to backend'''
+
+        try:
+            resp_header = {'proto': 1, 'typ': status, 'sid': self.sid}
+            resp_props = {'status': 1}
+            response = {'hdr': resp_header,
+                        'props': resp_props, 'body': ''}
+            await self.client.send(msgpack.packb(response, use_bin_type=True))
+            log.debug(f'Status: {status} sent successfully')
+        except TypeError as type_error:
+            log.error(f'send_client_status_to_backend: {type_error}')
+        except IOError as io_error:
+            log.error(f'send_client_status_to_backend: {io_error}')
 
 
     def write_command_to_shell(self, msg):
