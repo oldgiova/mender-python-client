@@ -91,9 +91,9 @@ class RemoteTerminal:
                     await self.send_client_status_to_backend(MESSAGE_TYPE_SPAWN_SHELL)
                     self.open_terminal()
                     self.start_transmitting_thread()
-                if hdr['typ'] == MESSAGE_TYPE_SHELL_COMMAND:
+                elif hdr['typ'] == MESSAGE_TYPE_SHELL_COMMAND:
                     self.write_command_to_shell(msg)
-                if hdr['typ'] == MESSAGE_TYPE_STOP_SHELL:
+                elif hdr['typ'] == MESSAGE_TYPE_STOP_SHELL:
                     self.shell.kill()
                     self.master = None
                     self.slave = None
@@ -214,4 +214,3 @@ class RemoteTerminal:
 
                 self.run_msg_processor_thread()
                 log.debug("The websocket msg processor started.")
-
