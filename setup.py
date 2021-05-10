@@ -47,7 +47,7 @@ setuptools.setup(
     install_requires=["cryptography", "requests", "msgpack", "websockets"],
     entry_points={"console_scripts": ["mender-python-client=mender.mender:main"]},
     package_dir={"": "src"},
-    python_requires=">=3.9",
+    python_requires=">=3.6",
     zip_safe=False,
     include_package_data=True,
 )
