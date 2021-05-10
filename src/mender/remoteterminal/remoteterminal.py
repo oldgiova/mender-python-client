@@ -93,7 +93,7 @@ class RemoteTerminal:
                     self.start_transmitting_thread()
                 elif hdr['typ'] == MESSAGE_TYPE_SHELL_COMMAND:
                     self.write_command_to_shell(msg)
-                if hdr['typ'] == MESSAGE_TYPE_STOP_SHELL:
+                elif hdr['typ'] == MESSAGE_TYPE_STOP_SHELL:
                     self.shell.kill()
                     self.master = None
                     self.slave = None
