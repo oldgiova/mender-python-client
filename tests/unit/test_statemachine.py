@@ -262,9 +262,14 @@ class TestStateMachines:
             def run(self, _):
                 return True
 
+        class MockRemoteTerminal:
+            def run(self, _):
+                return True
+
         idle_machine = statemachine.IdleStateMachine()
         idle_machine.sync_inventory = MockSyncInventory()
         idle_machine.sync_update = MockSyncUpdate()
+        idle_machine.remote_terminal = MockRemoteTerminal()
         ctx.authorized = True
         idle_machine.run(ctx)
 

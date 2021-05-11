@@ -44,7 +44,7 @@ setuptools.setup(
     ],
     keywords=["mender", "OTA", "updater"],
     packages=setuptools.find_packages(where="src"),
-    install_requires=["cryptography", "requests"],
+    install_requires=["cryptography", "requests", "msgpack", "websockets"],
     entry_points={"console_scripts": ["mender-python-client=mender.mender:main"]},
     package_dir={"": "src"},
     python_requires=">=3.6",
