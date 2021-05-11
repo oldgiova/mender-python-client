@@ -81,10 +81,7 @@ test:integration:
     - unset DOCKER_HOST
     - unset DOCKER_TLS_VERIFY
     - unset DOCKER_CERT_PATH
-    - apk --update add curl jq sysstat docker-compose hdparm
-    - apk --update add xz libc6-compat
-    - apk --update add bash git py-pip gcc make python2-dev
-      libc-dev libffi-dev openssl-dev python3 curl jq sysstat
+    # Install integration tests framework dependencies
     - apk add $(cat tests/integration/mender_integration/tests/requirements/apk-requirements.txt)
     - pip3 install -r tests/integration/mender_integration/tests/requirements/python-requirements.txt
     # Install mender-artifact
