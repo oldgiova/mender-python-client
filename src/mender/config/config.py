@@ -76,7 +76,7 @@ class Config:
                 self.ServerCertificate = v
             elif k == "RemoteTerminal":
                 log.debug(f"RemoteTerminal: {v}")
-                self.RemoteTerminal = (str)(v).lower() in ['true', '1', 'yes']
+                self.RemoteTerminal = (str)(v).lower() in ["true", "1", "yes"]
             elif k == "ShellCommand":
                 log.debug(f"ShellCommand: {v}")
                 self.ShellCommand = v

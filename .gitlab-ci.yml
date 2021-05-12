@@ -121,7 +121,7 @@ test:integration:
 test:runtime:
     extends: .test
     stage: test
-    image: python:3.6-buster
+    image: python:3.9-buster
     before_script:
         - mkdir -p /var/lib/mender/inventory
         - mkdir -p /etc/mender
@@ -133,7 +133,7 @@ test:runtime:
 test:static:
     extends: .test
     stage: test
-    image: python:3.6-buster
+    image: python:3.9-buster
     before_script:
         - pip install --cache-dir=~/.cache/pip-test isort
         - pip install --cache-dir=~/.cache/pip-test mypy
@@ -151,7 +151,7 @@ test:static:
 test:unit:
     extends: .test
     stage: test
-    image: python:3.6-buster
+    image: python:3.9-buster
     variables:
         BRANCH_NAME: "${CI_COMMIT_REF_SLUG}"
     before_script:

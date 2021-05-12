@@ -28,8 +28,8 @@ import mender.scripts.devicetype as devicetype
 import mender.scripts.runner as installscriptrunner
 import mender.settings.settings as settings
 from mender.client import HTTPUnathorized
-from mender.util import timeutil
 from mender.remoteterminal import remoteterminal
+from mender.util import timeutil
 
 log = logging.getLogger(__name__)
 
@@ -83,8 +83,7 @@ class Init:
         log.info("Try to load configuration for remote terminal")
         try:
             context.remoteTerminalConfig = config.load(
-                global_path = settings.PATHS.remote_terminal_conf,
-                local_path = '',
+                global_path=settings.PATHS.remote_terminal_conf, local_path="",
             )
             log.info(f"Loaded configuration: {context.remoteTerminalConfig}")
         except config.NoConfigurationFileError:
@@ -186,7 +185,7 @@ class AuthorizedStateMachine(StateMachine):
                 )  # Update machine runs when idle detects an update
             except HTTPUnathorized:
                 context.authorized = False
-                return # @fixme can it be change to 'break'?
+                return  # @fixme can it be change to 'break'?
         # @fixme: we are no longer authorized, the WebSocket connection needs to be closed
 
 
