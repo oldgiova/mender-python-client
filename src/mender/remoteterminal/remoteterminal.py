@@ -27,7 +27,7 @@ from websockets.exceptions import WebSocketException
 
 log = logging.getLogger(__name__)
 
-# mender-connect protocol messeges, taken from:
+# mender-connect protocol messages, taken from:
 # /mendersoftware/go-lib-micro/ws/shell/model.go
 MESSAGE_TYPE_SHELL_COMMAND = "shell"
 MESSAGE_TYPE_SPAWN_SHELL = "new"

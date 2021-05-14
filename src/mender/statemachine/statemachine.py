@@ -185,8 +185,7 @@ class AuthorizedStateMachine(StateMachine):
                 )  # Update machine runs when idle detects an update
             except HTTPUnathorized:
                 context.authorized = False
-                return  # @fixme can it be change to 'break'?
-        # @fixme: we are no longer authorized, the WebSocket connection needs to be closed
+                return  
 
 
 #
