@@ -205,14 +205,19 @@ class RemoteTerminal:
         after the device has authorized and JWT token obtained. """
 
         self.context = context
-        if context.remoteTerminalConfig.RemoteTerminal:
-            if context.authorized and not self.ws_connected:
-                self.ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        try:
+            if context.remoteTerminalConfig.RemoteTerminal:
+                if context.authorized and not self.ws_connected:
+                    self.ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
 
-                self.load_server_certificate()
+                    self.load_server_certificate()
 
-                # the JWT should already be acquired as we supposed to be in AuthorizedState
-                self.ext_headers = {"Authorization": "Bearer " + context.JWT}
+                    # the JWT should already be acquired as we supposed to be in AuthorizedState
+                    self.ext_headers = {"Authorization": "Bearer " + context.JWT}
 
-                self.run_msg_processor_thread()
-                log.debug("The websocket msg processor started.")
+                    self.run_msg_processor_thread()
+                    log.debug("The websocket msg processor started.")
+            else:
+                log.info("RemoteTerminal not enabled in mender-connect.conf")
+        except AttributeError:
+            log.error("Missing configuration file: mender-connect.conf")
