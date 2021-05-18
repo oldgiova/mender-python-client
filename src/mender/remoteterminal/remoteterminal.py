@@ -180,7 +180,7 @@ class RemoteTerminal:
         self.master, self.slave = pty.openpty()
         # by default the shell owner is root
         self.shell = subprocess.Popen(
-            [self.context.config.ShellCommand, "-i"],
+            [self.context.remoteTerminalConfig.ShellCommand, "-i"],
             start_new_session=True,
             stdin=self.slave,
             stdout=self.slave,
