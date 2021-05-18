@@ -146,7 +146,8 @@ disable=print-statement,
         fixme, # Leave while in development
         too-few-public-methods,
         too-many-instance-attributes,
-        duplicate-code
+        duplicate-code,
+        consider-using-with
 
 
 # Enable the message, report, category or checker with the given id(s). You can
@@ -414,6 +415,9 @@ good-names=i,
            InventoryPollIntervalSeconds,
            UpdatePollIntervalSeconds,
            RetryPollIntervalSeconds,
+           RemoteTerminal,
+           ShellCommand,
+           User,
            JWT,
            ID
 
@@ -512,7 +516,7 @@ max-attributes=7
 max-bool-expr=5
 
 # Maximum number of branch for function / method body.
-max-branches=12
+max-branches=13
 
 # Maximum number of locals for function / method body.
 max-locals=15

@@ -34,6 +34,8 @@ RDEPENDS_${PN} += "python3-core \
                    python3-modules \
                    python3-cryptography \
                    python3-requests \
+                   python3-websockets \
+                   python3-msgpack \
                    bash"
 
 do_install_append () {

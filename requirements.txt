@@ -1,4 +1,4 @@
-attrs==20.3.0
+attrs==21.2.0
 certifi==2020.12.5
 cffi==1.14.5
 chardet==4.0.0
@@ -11,12 +11,12 @@ py==1.10.0
 pycparser==2.20
 pyparsing==2.4.7
 requests==2.25.1
-six==1.15.0
+six==1.16.0
 toml==0.10.2
 urllib3==1.26.4
-pytest==6.2.2
+pytest==6.2.4
 pytest-cov==2.11.1
 pytest-httpserver==1.0.0
 coveralls==3.0.1
-
-
+msgpack==1.0.2
+websockets==8.1
