@@ -185,7 +185,7 @@ class AuthorizedStateMachine(StateMachine):
                 )  # Update machine runs when idle detects an update
             except HTTPUnathorized:
                 context.authorized = False
-                return  
+                return
 
 
 #
