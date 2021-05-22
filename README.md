@@ -10,6 +10,10 @@ Mender Python Client: A Python implementation of the Mender client
 
 ## Overview
 
+### Functionality
+
+#### Update daemon
+
 The _Mender Python Client_ is an API client, which is responsible for
 interacting with the Mender server, and downloading the Artifact for a
 deployment to a specified location on the device, and then exit until a local
@@ -24,6 +28,25 @@ sub-updater on the device has handled the update, reported the update status
  Python version should only be used if compiling the Mender client for your
  architecture is impossible.
 
+
+#### Remote terminal
+
+It also has support for remote terminal connectivity, as described
+[here](https://docs.mender.io/add-ons/remote-terminal).
+
+In short, this allows you to connect to the client via the Mender UI or through
+the [`mender-cli`](https://github.com/mendersoftware/mender-cli) tool, and
+connect to your device as if you had an ssh server running on the device.
+
+The remote terminal is configured via the file /etc/mender/mender-connect.conf.
+An example configuration looks like:
+
+```
+{
+    "RemoteTerminal": "True",
+    "ShellCommand": "/bin/bash"
+}
+```
 
 ## Workings
 

@@ -40,7 +40,6 @@ setuptools.setup(
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: Apache Software License",
         "Operating System :: OS Independent",
-        "Development Status :: 2 - Pre-Alpha",
     ],
     keywords=["mender", "OTA", "updater"],
     packages=setuptools.find_packages(where="src"),
