@@ -47,12 +47,13 @@ class RemoteTerminal:
         self.sid = None
         self.ws_connected = False
         self.context = None
-        self.session_started = False
         self.ext_headers = None
         self.ssl_context = None
         self.master = None
         self.slave = None
         self.shell = None
+        self.sending_thread = None
+        self.run_sending_thread = False
 
     async def ws_connect(self):
         """connects to the backend websocket server."""
@@ -80,30 +81,56 @@ class RemoteTerminal:
         await self.ws_connect()
         if self.client is None:
             log.debug("Websocket connection failed")
+            self.ws_connected = False
             return -1
         log.debug("Websocket connected")
+
         try:
             while True:
                 packed_msg = await self.client.recv()
                 msg: dict = msgpack.unpackb(packed_msg, raw=False)
                 hdr = msg["hdr"]
-                if hdr["typ"] == MESSAGE_TYPE_SPAWN_SHELL and not self.session_started:
+                if hdr["typ"] == MESSAGE_TYPE_SPAWN_SHELL and not self.sid:
                     self.sid = hdr["sid"]
-                    self.session_started = True
                     await self.send_client_status_to_backend(MESSAGE_TYPE_SPAWN_SHELL)
                     self.open_terminal()
                     self.start_transmitting_thread()
                 elif hdr["typ"] == MESSAGE_TYPE_SHELL_COMMAND:
-                    self.write_command_to_shell(msg)
+                    if (
+                        self.sid == hdr["sid"]
+                        and self.shell
+                        and self.master
+                        and self.slave
+                    ):
+                        self.write_command_to_shell(msg)
                 elif hdr["typ"] == MESSAGE_TYPE_STOP_SHELL:
-                    self.shell.kill()
-                    self.master = None
-                    self.slave = None
-                    await self.send_client_status_to_backend(MESSAGE_TYPE_STOP_SHELL)
-                    self.session_started = False
-
+                    if self.sid == hdr["sid"]:
+                        self.stop_session()
+                        await self.send_client_status_to_backend(
+                            MESSAGE_TYPE_STOP_SHELL
+                        )
+                        self.sid = None
         except WebSocketException as ws_exception:
             log.error(f"proto_msg_processor: {ws_exception}")
+            self.ws_connected = False
+
+    def stop_session(self):
+        """does a clenup of all related session variables"""
+
+        if self.shell:
+            self.shell.kill()
+            self.shell = None
+        if self.master:
+            os.close(self.master)
+            self.master = None
+        if self.slave:
+            os.close(self.slave)
+            self.slave = None
+        self.run_sending_thread = False
+        if self.sending_thread:
+            self.sending_thread.join(1)
+            if self.sending_thread.is_alive():
+                log.error("Sending thread did not finish within 1 second")
 
     async def send_terminal_stdout_to_backend(self):
         """reads the data from the shell's stdout descriptor, packs into the protocol msg
@@ -113,7 +140,7 @@ class RemoteTerminal:
         if not self.ws_connected:
             log.debug("leaving send_terminal_stdout_to_backend")
             return -1
-        while True:
+        while self.run_sending_thread:
             try:
                 shell_stdout = os.read(self.master, 102400)
                 resp_header = {
@@ -131,7 +158,11 @@ class RemoteTerminal:
             except TypeError as type_error:
                 log.error(f"send_terminal_stdout_to_backend: {type_error}")
             except IOError as io_error:
-                log.error(f"send_terminal_stdout_to_backend: {io_error}")
+                # errno 5 is expected after closing the file descriptor on which os.read waits
+                if io_error.errno == 5:
+                    log.info("Session closed.")
+                else:
+                    log.error(f"send_terminal_stdout_to_backend: {io_error}")
 
     async def send_client_status_to_backend(self, status):
         """send connection status to backend"""
@@ -161,10 +192,12 @@ class RemoteTerminal:
         """starts transmitting thread"""
 
         log.debug("about to start transmitting thread")
-        thread_send = threading.Thread(
+        self.run_sending_thread = True
+        self.sending_thread = threading.Thread(
             target=lambda: asyncio.run(self.send_terminal_stdout_to_backend())
         )
-        thread_send.start()
+        self.sending_thread.name = "sending_thread"
+        self.sending_thread.start()
 
     def run_msg_processor_thread(self):
         """starts the protocol messages thread"""
@@ -173,6 +206,7 @@ class RemoteTerminal:
         thread_ws = threading.Thread(
             target=lambda: asyncio.run(self.proto_msg_processor())
         )
+        thread_ws.name = "proto_msg_thread"
         thread_ws.start()
 
     def open_terminal(self):

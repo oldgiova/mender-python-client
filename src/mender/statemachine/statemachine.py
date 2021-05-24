@@ -83,7 +83,8 @@ class Init:
         log.info("Try to load configuration for remote terminal")
         try:
             context.remoteTerminalConfig = config.load(
-                global_path=settings.PATHS.remote_terminal_conf, local_path="",
+                local_path=settings.PATHS.local_remote_terminal_conf,
+                global_path=settings.PATHS.global_remote_terminal_conf,
             )
             log.info(f"Loaded configuration: {context.remoteTerminalConfig}")
         except config.NoConfigurationFileError:
