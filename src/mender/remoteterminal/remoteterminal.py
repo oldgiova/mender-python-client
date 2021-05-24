@@ -47,7 +47,6 @@ class RemoteTerminal:
         self.sid = None
         self.ws_connected = False
         self.context = None
-        self.session_started = False
         self.ext_headers = None
         self.ssl_context = None
         self.master = None
@@ -91,25 +90,26 @@ class RemoteTerminal:
                 packed_msg = await self.client.recv()
                 msg: dict = msgpack.unpackb(packed_msg, raw=False)
                 hdr = msg["hdr"]
-                if hdr["typ"] == MESSAGE_TYPE_SPAWN_SHELL and not self.session_started:
+                if hdr["typ"] == MESSAGE_TYPE_SPAWN_SHELL and not self.sid:
                     self.sid = hdr["sid"]
-                    self.session_started = True
                     await self.send_client_status_to_backend(MESSAGE_TYPE_SPAWN_SHELL)
                     self.open_terminal()
                     self.start_transmitting_thread()
                 elif hdr["typ"] == MESSAGE_TYPE_SHELL_COMMAND:
                     if (
-                        self.session_started
+                        self.sid == hdr["sid"]
                         and self.shell
                         and self.master
                         and self.slave
                     ):
                         self.write_command_to_shell(msg)
                 elif hdr["typ"] == MESSAGE_TYPE_STOP_SHELL:
-                    if self.session_started:
+                    if self.sid == hdr["sid"]:
                         self.stop_session()
-                    await self.send_client_status_to_backend(MESSAGE_TYPE_STOP_SHELL)
-                    self.session_started = False
+                        await self.send_client_status_to_backend(
+                            MESSAGE_TYPE_STOP_SHELL
+                        )
+                        self.sid = None
         except WebSocketException as ws_exception:
             log.error(f"proto_msg_processor: {ws_exception}")
             self.ws_connected = False
@@ -119,7 +119,7 @@ class RemoteTerminal:
 
         if self.shell:
             self.shell.kill()
-        self.shell = None
+            self.shell = None
         if self.master:
             os.close(self.master)
             self.master = None
@@ -159,7 +159,7 @@ class RemoteTerminal:
                 log.error(f"send_terminal_stdout_to_backend: {type_error}")
             except IOError as io_error:
                 # errno 5 is expected after closing the file descriptor on which os.read waits
-                if 5 == io_error.errno:
+                if io_error.errno == 5:
                     log.info("Session closed.")
                 else:
                     log.error(f"send_terminal_stdout_to_backend: {io_error}")
