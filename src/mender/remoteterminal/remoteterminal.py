@@ -115,7 +115,7 @@ class RemoteTerminal:
             self.ws_connected = False
 
     def stop_session(self):
-        """does a clenup of all related session variables"""
+        """does a cleanup of all related session variables"""
 
         if self.shell:
             self.shell.kill()
