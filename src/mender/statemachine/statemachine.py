@@ -299,15 +299,32 @@ class Download(State):
 class ArtifactInstall(State):
     def run(self, context):
         log.info("Running the ArtifactInstall state...")
-        if installscriptrunner.run_sub_updater(context.deployment.ID):
+        ret = installscriptrunner.run_sub_updater(context.deployment.ID)
+        if ret == installscriptrunner.INSTALL_SCRIPT_OK:
             log.info(
                 "The client has successfully spawned the install-script process. Exiting. Goodbye!"
             )
             sys.exit(0)
             # return ArtifactReboot()
-        log.error(
-            "The daemon should never reach this point. Something is wrong with the setup of the client."
-        )
+        elif ret in (
+            installscriptrunner.INSTALL_SCRIPT_NOT_FOUND_ERROR,
+            installscriptrunner.INSTALL_SCRIPT_PERMISSION_ERROR,
+        ):
+            if not deployments.report(
+                context.config.ServerURL,
+                deployments.STATUS_FAILURE,
+                context.deployment.ID,
+                context.config.ServerCertificate,
+                context.JWT,
+                deployment_logger=log,
+            ):
+                log.error(
+                    "Failed to report the deployment status 'FAILURE' to the Mender server"
+                )
+        else:
+            log.error(
+                "The daemon should never reach this point. Something is wrong with the setup of the client."
+            )
         sys.exit(1)
         # return ArtifactFailure()
 
