@@ -67,16 +67,16 @@ test:integration:
   stage: test
   image: docker:19.03-dind
   variables:
-      GIT_SUBMODULE_STRATEGY: recursive
-      MENDER_ARTIFACT_VERSION: 3.4.0
-      DOCKER_CLIENT_TIMEOUT: 300
-      COMPOSE_HTTP_TIMEOUT: 300
+    GIT_SUBMODULE_STRATEGY: recursive
+    MENDER_ARTIFACT_VERSION: 3.4.0
+    DOCKER_CLIENT_TIMEOUT: 300
+    COMPOSE_HTTP_TIMEOUT: 300
   tags:
     - mender-qa-slave-highcpu
   needs:
-      - build:client
+    - build:client
   dependencies:
-      - build:client
+    - build:client
   before_script:
     - unset DOCKER_HOST
     - unset DOCKER_TLS_VERIFY
@@ -105,62 +105,58 @@ test:integration:
     - cd tests/integration
     - ./run.sh test_python_api_client.py
   artifacts:
-      when: always
-      reports:
-          junit: tests/integration/report.xml
-
-
+    when: always
+    reports:
+        junit: tests/integration/report.xml
 
 .test:
-    needs: []
-    cache:
-        key: ${CI_COMMIT_REF_SLUG}
-        paths:
-            - ~/.cache/pip-test/
+  needs: []
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}
+    paths:
+        - ~/.cache/pip-test/
 
 test:runtime:
-    extends: .test
-    stage: test
-    image: python:3.9-buster
-    before_script:
-        - mkdir -p /var/lib/mender/inventory
-        - mkdir -p /etc/mender
-        - cp support/* /var/lib/mender/inventory/
-        - pip install --cache-dir=~/.cache/pip-test/ .
-    script:
-        - mender-python-client bootstrap
+  extends: .test
+  stage: test
+  image: python:3.9-buster
+  before_script:
+    - mkdir -p /var/lib/mender/inventory
+    - mkdir -p /etc/mender
+    - cp support/* /var/lib/mender/inventory/
+    - pip install --cache-dir=~/.cache/pip-test/ .
+  script:
+    - mender-python-client bootstrap
 
 test:static:
-    extends: .test
-    stage: test
-    image: python:3.9-buster
-    before_script:
-        - pip install --cache-dir=~/.cache/pip-test isort
-        - pip install --cache-dir=~/.cache/pip-test mypy
-        - pip install --cache-dir=~/.cache/pip-test pylint
-        - pip install --cache-dir=~/.cache/pip-test .
-        - pip install --cache-dir=~/.cache/pip-test -r requirements.txt
-        - pip install --cache-dir=~/.cache/pip-test -r tests/unit/requirements.txt
-    script:
-        - isort --check-only --line-length 88 --wrap-length 88 src
-        - isort --check-only --line-length 88 --wrap-length 88 tests/unit/test_*.py
-        - mypy src
-        - pylint --rcfile=.pylintrc-develop src
-        - pylint --rcfile=.pylintrc-develop --disable=no-self-use --disable=no-member --disable=too-many-ancestors --disable=protected-access --disable=too-many-statements --disable=too-many-arguments tests/unit/test_*.py
+  extends: .test
+  stage: test
+  image: python:3.9-buster
+  before_script:
+    - pip install --cache-dir=~/.cache/pip-test -r requirements_static_tools.txt
+    - pip install --cache-dir=~/.cache/pip-test .
+    - pip install --cache-dir=~/.cache/pip-test -r requirements.txt
+    - pip install --cache-dir=~/.cache/pip-test -r tests/unit/requirements.txt
+  script:
+    - isort --check-only --line-length 88 --wrap-length 88 src
+    - isort --check-only --line-length 88 --wrap-length 88 tests/unit/test_*.py
+    - mypy src
+    - pylint --rcfile=.pylintrc-develop src
+    - pylint --rcfile=.pylintrc-develop --disable=no-self-use --disable=no-member --disable=too-many-ancestors --disable=protected-access --disable=too-many-statements --disable=too-many-arguments tests/unit/test_*.py
 
 test:unit:
-    extends: .test
-    stage: test
-    image: python:3.9-buster
-    variables:
-        BRANCH_NAME: "${CI_COMMIT_REF_SLUG}"
-    before_script:
-        - pip install --cache-dir=~/.cache/pip-test -r requirements.txt
-        - pip install --cache-dir=~/.cache/pip-test -r tests/unit/requirements.txt
-        - pip install --cache-dir=~/.cache/pip-test -e .
-    script:
-        - pytest --junit-xml=report.xml --cov=src/mender tests/unit && coveralls
-    artifacts:
-        when: always
-        reports:
-            junit: report.xml
+  extends: .test
+  stage: test
+  image: python:3.9-buster
+  variables:
+    BRANCH_NAME: "${CI_COMMIT_REF_SLUG}"
+  before_script:
+    - pip install --cache-dir=~/.cache/pip-test -r requirements.txt
+    - pip install --cache-dir=~/.cache/pip-test -r tests/unit/requirements.txt
+    - pip install --cache-dir=~/.cache/pip-test -e .
+  script:
+    - pytest --junit-xml=report.xml --cov=src/mender tests/unit && coveralls
+  artifacts:
+    when: always
+    reports:
+      junit: report.xml
