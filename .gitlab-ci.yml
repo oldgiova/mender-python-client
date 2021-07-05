@@ -133,9 +133,7 @@ test:static:
   stage: test
   image: python:3.9-buster
   before_script:
-    - pip install --cache-dir=~/.cache/pip-test isort
-    - pip install --cache-dir=~/.cache/pip-test mypy
-    - pip install --cache-dir=~/.cache/pip-test pylint
+    - pip install --cache-dir=~/.cache/pip-test -r requirements_static_tools.txt
     - pip install --cache-dir=~/.cache/pip-test .
     - pip install --cache-dir=~/.cache/pip-test -r requirements.txt
     - pip install --cache-dir=~/.cache/pip-test -r tests/unit/requirements.txt
