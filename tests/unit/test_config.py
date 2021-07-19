@@ -18,7 +18,7 @@ import os
 
 import pytest
 
-import mender.config.config as config
+from mender.config import config
 
 GLOBAL_TESTDATA = {
     "InventoryPollIntervalSeconds": 200,

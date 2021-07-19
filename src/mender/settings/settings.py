@@ -21,7 +21,7 @@ class Path:
 
     Usage::
 
-      >>> import mender.settings.settings as settings
+      >>> from mender.settings import settings
       >>> private_key_location = settings.PATHS.key
 
 

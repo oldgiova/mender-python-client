@@ -19,7 +19,7 @@ from typing import Optional
 from cryptography.exceptions import UnsupportedAlgorithm
 from cryptography.hazmat.primitives.asymmetric.rsa import RSAPrivateKeyWithSerialization
 
-import mender.security.key as key
+from mender.security import key
 
 log = logging.getLogger(__name__)
 

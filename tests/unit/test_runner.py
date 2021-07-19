@@ -19,8 +19,8 @@ import stat
 
 import pytest
 
-import mender.scripts.runner as runner
-import mender.settings.settings as settings
+from mender.scripts import runner
+from mender.settings import settings
 
 
 @pytest.fixture(autouse=True)

@@ -17,8 +17,8 @@ import os.path
 
 import pytest
 
-import mender.log.menderlogger as menderlogger
-import mender.settings.settings as settings
+from mender.log import menderlogger
+from mender.settings import settings
 
 log = logging.getLogger("mender.logTesting")
 
