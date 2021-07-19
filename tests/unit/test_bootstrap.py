@@ -14,7 +14,7 @@
 import os
 import os.path
 
-import mender.bootstrap.bootstrap as bootstrap
+from mender.bootstrap import bootstrap
 
 
 class TestBootstrap:

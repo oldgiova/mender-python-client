@@ -13,7 +13,7 @@
 #    limitations under the License.
 
 
-import mender.security.key as key
+from mender.security import key
 
 
 class TestSecurity:

@@ -14,11 +14,9 @@
 
 import logging as log
 import os
-import os.path as path
 from typing import List
 
-import mender.scripts.artifactinfo as artifactinfo
-import mender.scripts.devicetype as devicetype
+from mender.scripts import artifactinfo, devicetype
 from mender.scripts.aggregator.aggregator import ScriptKeyValueAggregator
 
 
@@ -50,7 +48,7 @@ def inventory_scripts(inventory_dir: str) -> List[ScriptKeyValueAggregator]:
     """
     scripts = []
     for f in os.listdir(inventory_dir):
-        filepath = path.join(inventory_dir, f)
-        if path.isfile(filepath) and os.access(filepath, os.X_OK):
+        filepath = os.path.join(inventory_dir, f)
+        if os.path.isfile(filepath) and os.access(filepath, os.X_OK):
             scripts.append(ScriptKeyValueAggregator(filepath))
     return scripts

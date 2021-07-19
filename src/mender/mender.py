@@ -15,13 +15,12 @@ import argparse
 import logging
 import sys
 
-import mender.bootstrap.bootstrap as bootstrap
-import mender.client.authorize as authorize
-import mender.client.deployments as deployments
-import mender.log.menderlogger as menderlogger
-import mender.settings.settings as settings
-import mender.statemachine.statemachine as statemachine
 from mender._version import __version__ as package_version
+from mender.bootstrap import bootstrap
+from mender.client import authorize, deployments
+from mender.log import menderlogger
+from mender.settings import settings
+from mender.statemachine import statemachine
 
 log = logging.getLogger(__name__)
 

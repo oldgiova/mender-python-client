@@ -18,11 +18,8 @@ import stat
 
 import pytest
 
-import mender.scripts.aggregator.aggregator as aggregator
-import mender.scripts.aggregator.identity as identity
-import mender.scripts.aggregator.inventory as inventory
-import mender.scripts.artifactinfo as artifactinfo
-import mender.scripts.devicetype as devicetype
+from mender.scripts import artifactinfo, devicetype
+from mender.scripts.aggregator import aggregator, identity, inventory
 
 
 class TestScriptKeyValueAggregator:

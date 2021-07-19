@@ -19,10 +19,10 @@ from typing import Dict, Optional
 
 import requests
 
-import mender.log.log as menderlog
-import mender.settings.settings as settings
 from mender.client import HTTPUnathorized
 from mender.client.http_requests import MenderRequestsException, http_request
+from mender.log import log as menderlog
+from mender.settings import settings
 
 log = logging.getLogger(__name__)
 

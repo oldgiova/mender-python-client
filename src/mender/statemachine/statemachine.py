@@ -16,19 +16,15 @@ import os.path
 import sys
 import time
 
-import mender.bootstrap.bootstrap as bootstrap
-import mender.client.authorize as authorize
-import mender.client.deployments as deployments
-import mender.client.inventory as client_inventory
-import mender.config.config as config
-import mender.scripts.aggregator.identity as identity
-import mender.scripts.aggregator.inventory as inventory
-import mender.scripts.artifactinfo as artifactinfo
-import mender.scripts.devicetype as devicetype
-import mender.scripts.runner as installscriptrunner
-import mender.settings.settings as settings
-from mender.client import HTTPUnathorized
+from mender.bootstrap import bootstrap
+from mender.client import HTTPUnathorized, authorize, deployments
+from mender.client import inventory as client_inventory
+from mender.config import config
 from mender.remoteterminal import remoteterminal
+from mender.scripts import artifactinfo, devicetype
+from mender.scripts import runner as installscriptrunner
+from mender.scripts.aggregator import identity, inventory
+from mender.settings import settings
 from mender.util import timeutil
 
 log = logging.getLogger(__name__)

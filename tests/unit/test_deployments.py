@@ -19,7 +19,7 @@ import pytest
 import requests
 from werkzeug.wrappers import Response
 
-import mender.client.deployments as deployments
+from mender.client import deployments
 
 
 class CustomContentLengthResponse(Response):
