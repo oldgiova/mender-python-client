@@ -15,7 +15,7 @@ import logging
 
 from cryptography.hazmat.primitives.asymmetric.rsa import RSAPrivateKeyWithSerialization
 
-import mender.security.rsa as rsa
+from mender.security import rsa
 
 log = logging.getLogger(__name__)
 

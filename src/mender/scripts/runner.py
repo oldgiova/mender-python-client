@@ -15,7 +15,7 @@ import logging
 import os.path
 import subprocess
 
-import mender.settings.settings as settings
+from mender.settings import settings
 
 log = logging.getLogger(__name__)
 

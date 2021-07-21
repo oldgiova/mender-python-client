@@ -18,8 +18,8 @@ from typing import Optional
 import requests
 from cryptography.hazmat.primitives.asymmetric.rsa import RSAPrivateKeyWithSerialization
 
-import mender.security.key as key
 from mender.client.http_requests import MenderRequestsException, http_request
+from mender.security import key
 
 log = logging.getLogger(__name__)
 

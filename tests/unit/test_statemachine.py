@@ -19,19 +19,16 @@ import time
 
 import pytest
 
-import mender.client.deployments as deployments
-import mender.client.inventory as client_inventory
-import mender.config.config as config
-import mender.log.menderlogger as menderlogger
-import mender.scripts.aggregator.identity as identity
-import mender.scripts.aggregator.inventory as inventory
-import mender.scripts.artifactinfo as artifactinfo
-import mender.scripts.devicetype as devicetype
-import mender.scripts.runner as installscriptrunner
-import mender.settings.settings as settings
-import mender.statemachine.statemachine as statemachine
-from mender.client import HTTPUnathorized
+from mender.client import HTTPUnathorized, deployments
+from mender.client import inventory as client_inventory
+from mender.config import config
+from mender.log import menderlogger
 from mender.log.log import DeploymentLogHandler
+from mender.scripts import artifactinfo, devicetype
+from mender.scripts import runner as installscriptrunner
+from mender.scripts.aggregator import identity, inventory
+from mender.settings import settings
+from mender.statemachine import statemachine
 from mender.util import timeutil
 
 

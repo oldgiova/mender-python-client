@@ -16,7 +16,7 @@ import logging as log
 
 import pytest
 
-import mender.client.inventory as inventory
+from mender.client import inventory
 
 
 @pytest.fixture(name="server_url")

@@ -17,14 +17,13 @@ import os
 
 import pytest
 
-import mender.bootstrap.bootstrap as bootstrap
-import mender.client.authorize as authorize
-import mender.client.deployments as deployments
-import mender.log.menderlogger as menderlogger
-import mender.mender as main
-import mender.settings.settings as settings
-import mender.statemachine.statemachine as statemachine
+from mender import mender as main
+from mender.bootstrap import bootstrap
+from mender.client import authorize, deployments
+from mender.log import menderlogger
 from mender.log.log import DeploymentLogHandler
+from mender.settings import settings
+from mender.statemachine import statemachine
 
 
 @pytest.fixture(autouse=True)

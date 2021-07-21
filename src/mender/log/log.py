@@ -18,7 +18,7 @@ import os
 import os.path
 from typing import List
 
-import mender.settings.settings as settings
+from mender.settings import settings
 
 log = logging.getLogger(__name__)
 

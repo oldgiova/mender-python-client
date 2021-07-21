@@ -16,8 +16,8 @@ import logging as log
 
 import pytest
 
-import mender.client.authorize as authorize
-import mender.security.key as key
+from mender.client import authorize
+from mender.security import key
 
 
 @pytest.fixture(name="server_url")

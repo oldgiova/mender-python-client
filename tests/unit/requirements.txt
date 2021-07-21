@@ -1,3 +1,5 @@
 Werkzeug==1.0.1
 pytest-asyncio==0.15.1
 pytest-mock==1.10.3
+types-requests==0.1.11
+types-cryptography==3.3.2
