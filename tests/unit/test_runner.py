@@ -38,7 +38,7 @@ def test_run_sub_updater(monkeypatch, tmpdir):
     with monkeypatch.context() as m:
         m.setattr(settings.PATHS, "lockfile_path", lockfile)
         m.setattr(settings.PATHS, "install_script", install_script)
-        assert runner.run_sub_updater("deploymentid-2")
+        assert runner.run_sub_updater("deploymentid-2") == runner.INSTALL_SCRIPT_OK
         assert os.path.exists(lockfile)
 
 
@@ -49,7 +49,10 @@ def test_no_install_script(caplog, monkeypatch, tmpdir):
     with monkeypatch.context() as m:
         m.setattr(settings.PATHS, "lockfile_path", lockfile)
         m.setattr(settings.PATHS, "install_script", install_script)
-        assert not runner.run_sub_updater("deploymentid-2")
+        assert (
+            runner.run_sub_updater("deploymentid-2")
+            == runner.INSTALL_SCRIPT_NOT_FOUND_ERROR
+        )
         assert "No install script found" in caplog.text
 
 
@@ -61,7 +64,10 @@ def test_install_script_permissions(caplog, monkeypatch, tmpdir):
     with monkeypatch.context() as m:
         m.setattr(settings.PATHS, "lockfile_path", lockfile)
         m.setattr(settings.PATHS, "install_script", install_script)
-        assert not runner.run_sub_updater("deploymentid-2")
+        assert (
+            runner.run_sub_updater("deploymentid-2")
+            == runner.INSTALL_SCRIPT_PERMISSION_ERROR
+        )
         assert (
             f"The install script '{settings.PATHS.install_script}' has the wrong permissions"
             in caplog.text

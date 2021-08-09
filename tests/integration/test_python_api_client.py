@@ -13,6 +13,7 @@
 #    limitations under the License.
 
 import time
+
 import pytest
 
 import mender_integration.tests.conftest as cf
@@ -20,9 +21,11 @@ import mender_integration.tests.conftest as cf
 cf.machine_name = "qemux86-64"
 
 from mender_integration.tests.common_setup import standard_setup_one_client_bootstrapped
+from mender_integration.tests.MenderAPI import deploy, devauth
 from mender_integration.tests.tests.common_update import (
     update_image,
     update_image_failed,
+    common_update_procedure,
 )
 
 
@@ -105,3 +108,16 @@ def test_inventory(standard_setup_one_client_bootstrapped):
     inventory_post_update = extract_inventory()
     assert inventory_post_update
     assert inventory_pre_update != inventory_post_update
+
+
+def test_missing_install_script(standard_setup_one_client_bootstrapped):
+    """Test that the client uploads the deployment log upon a missing install script"""
+
+    device = standard_setup_one_client_bootstrapped.device
+    device.run("rm /usr/share/mender/install")
+
+    deployment_id, _ = common_update_procedure(
+        "core-image-full-cmdline-qemux86-64.ext4"
+    )
+
+    deploy.check_expected_statistics(deployment_id, "failure", 1)
