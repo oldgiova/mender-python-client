@@ -116,9 +116,8 @@ def test_missing_install_script(standard_setup_one_client_bootstrapped):
     device = standard_setup_one_client_bootstrapped.device
     device.run("rm /usr/share/mender/install")
 
-    deployment_id, _ = common_update_procedure("broken_update.ext4", make_artifact=None)
+    deployment_id, _ = common_update_procedure(
+        "core-image-full-cmdline-qemux86-64.ext4"
+    )
 
     deploy.check_expected_statistics(deployment_id, "failure", 1)
-
-    for d in devauth.get_devices():
-        assert expected_log_message in deploy.get_logs(d["id"], deployment_id)
