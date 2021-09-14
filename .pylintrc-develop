@@ -147,7 +147,8 @@ disable=print-statement,
         too-few-public-methods,
         too-many-instance-attributes,
         duplicate-code,
-        consider-using-with
+        consider-using-with,
+        logging-not-lazy
 
 
 # Enable the message, report, category or checker with the given id(s). You can
