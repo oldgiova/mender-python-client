@@ -191,6 +191,8 @@ def download(
 def download_and_resume(
     deployment_data: DeploymentInfo, artifact_path: str, server_certificate: str
 ) -> bool:
+    # pylint: disable=too-many-locals
+    # pylint: disable=too-many-statements
     """Download the update artifact to the artifact_path"""
     if not artifact_path:
         log.error("No path provided in which to store the Artifact")
