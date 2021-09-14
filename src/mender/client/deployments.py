@@ -208,6 +208,7 @@ def download_and_resume(
     offset: int = 0
     content_length = None
     date_start = datetime.now()
+    log.debug(f"Download started at: {date_start}")
     tried: int = 0
     chunk_no: int = 0
     while True:
@@ -238,7 +239,6 @@ def download_and_resume(
                 with open(artifact_path, "rb+") as fh:
                     fh.seek(offset)
                     date_past = datetime.now()
-                    date_start = datetime.now()
                     for data in response.iter_content(
                         chunk_size=DOWNLOAD_CHUNK_SIZE_BYTES
                     ):  # 1 chunk at a time
@@ -247,60 +247,43 @@ def download_and_resume(
                         fh.write(data)
                         offset += len(data)
                         fh.flush()
-                        t_difference = datetime.now() - date_past
-                        t_diff_millis = (
-                            t_difference.seconds * 1000
-                            + t_difference.microseconds / 1000
-                        )
                         speed = (
-                            DOWNLOAD_CHUNK_SIZE_BYTES * 8 / t_diff_millis * 1000 / 1024
+                            DOWNLOAD_CHUNK_SIZE_BYTES
+                            * 8
+                            / millisec_diff_now(date_past)
+                            * 1000
+                            / 1024
                         )
                         log.debug(
                             f"chunk: {chunk_no} data length: {len(data)}"
-                            + f"time passed: {t_diff_millis:.0f} millis speed {speed:.1f} Kbit/s"
+                            + f"time passed: {millisec_diff_now(date_past):.0f} milliseconds."
+                            + f"Speed {speed:.1f} Kbit/s"
                         )
-                        date_past = datetime.now()
                         chunk_no += 1
                 # Download completed in one go, return
-                t_difference = datetime.now() - date_start
-                t_diff_millis = (
-                    t_difference.seconds * 1000 + t_difference.microseconds / 1000
-                )
                 log.debug(
                     f"Got EOF. Wrote {offset} bytes. Total is {content_length}."
-                    + "Time {t_diff_millis/1000:.2f} seconds"
+                    + "Time {millisec_diff_now(date_start)/1000:.2f} seconds"
                 )
                 if offset >= content_length:
                     return True
         except MenderRequestsException as e:
             log.debug(e)
-            t_difference = datetime.now() - date_start
-            t_diff_millis = (
-                t_difference.seconds * 1000 + t_difference.microseconds / 1000
-            )
             log.debug(
                 f"Got Error. Wrote {offset} bytes. Total is {content_length}."
-                + "Time {t_diff_millis:.0f} milliseconds"
+                + "Time {millisec_diff_now(date_start):.0f} milliseconds"
             )
         except requests.ConnectionError as e:
             log.debug(e)
-            t_difference = datetime.now() - date_start
-            t_diff_millis = (
-                t_difference.seconds * 1000 + t_difference.microseconds / 1000
-            )
             log.debug(
                 f"Got Error. Wrote {offset} bytes. Total is {content_length}."
-                + "Time {t_diff_millis:.0f} milliseconds"
+                + "Time {millisec_diff_now(date_start):.0f} milliseconds"
             )
         except SSLError as e:
             log.debug(e)
-            t_difference = datetime.now() - date_start
-            t_diff_millis = (
-                t_difference.seconds * 1000 + t_difference.microseconds / 1000
-            )
             log.debug(
                 f"Got Error. Wrote {offset} bytes. Total is {content_length}."
-                + "Time {t_diff_millis:.0f} milliseconds"
+                + "Time {millisec_diff_now(date_start):.0f} milliseconds"
             )
 
         # Prepare for next attempt
@@ -373,3 +356,8 @@ def report(
         log.error(e)
         return False
     return True
+
+
+def millisec_diff_now(date_start):
+    t_difference = datetime.now() - date_start
+    return t_difference.seconds * 1000 + t_difference.microseconds / 1000
