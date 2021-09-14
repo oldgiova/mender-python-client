@@ -254,7 +254,8 @@ def download_and_resume(
                             DOWNLOAD_CHUNK_SIZE_BYTES * 8 / t_diff_millis * 1000 / 1024
                         )
                         log.debug(
-                            f"chunk: {chunk_no} data length: {len(data)} time passed: {t_diff_millis:.0f} millis speed {speed:.1f} Kbit/s"
+                            f"chunk: {chunk_no} data length: {len(data)}"
+                            + f"time passed: {t_diff_millis:.0f} millis speed {speed:.1f} Kbit/s"
                         )
                         date_past = datetime.now()
                         chunk_no += 1
@@ -264,7 +265,8 @@ def download_and_resume(
                     t_difference.seconds * 1000 + t_difference.microseconds / 1000
                 )
                 log.debug(
-                    f"Got EOF. Wrote {offset} bytes. Total is {content_length}. Time {t_diff_millis/1000:.2f} seconds"
+                    f"Got EOF. Wrote {offset} bytes. Total is {content_length}."
+                    + "Time {t_diff_millis/1000:.2f} seconds"
                 )
                 if offset >= content_length:
                     return True
@@ -275,7 +277,8 @@ def download_and_resume(
                 t_difference.seconds * 1000 + t_difference.microseconds / 1000
             )
             log.debug(
-                f"Got Error. Wrote {offset} bytes. Total is {content_length}. Time {t_diff_millis:.0f} milliseconds"
+                f"Got Error. Wrote {offset} bytes. Total is {content_length}."
+                + "Time {t_diff_millis:.0f} milliseconds"
             )
         except requests.ConnectionError as e:
             log.debug(e)
@@ -284,7 +287,8 @@ def download_and_resume(
                 t_difference.seconds * 1000 + t_difference.microseconds / 1000
             )
             log.debug(
-                f"Got Error. Wrote {offset} bytes. Total is {content_length}. Time {t_diff_millis:.0f} milliseconds"
+                f"Got Error. Wrote {offset} bytes. Total is {content_length}."
+                + "Time {t_diff_millis:.0f} milliseconds"
             )
         except SSLError as e:
             log.debug(e)
@@ -293,7 +297,8 @@ def download_and_resume(
                 t_difference.seconds * 1000 + t_difference.microseconds / 1000
             )
             log.debug(
-                f"Got Error. Wrote {offset} bytes. Total is {content_length}. Time {t_diff_millis:.0f} milliseconds"
+                f"Got Error. Wrote {offset} bytes. Total is {content_length}."
+                + "Time {t_diff_millis:.0f} milliseconds"
             )
 
         # Prepare for next attempt
@@ -332,7 +337,8 @@ def report(
         )
         if response.status_code != 204:
             log.error(
-                f"Failed to upload the deployment status '{status}' error: {response.status_code}: {response.reason}"
+                f"Failed to upload the deployment status '{status}' error:"
+                + "{response.status_code}: {response.reason}"
             )
             return False
         if status == STATUS_FAILURE:
@@ -357,7 +363,8 @@ def report(
             )
             if response.status_code != 204:
                 log.error(
-                    f"Failed to upload the deployment log error: {response.status_code}: {response.reason} {response.text}"
+                    "Failed to upload the deployment log error: "
+                    + f"{response.status_code}: {response.reason} {response.text}"
                 )
                 return False
     except MenderRequestsException as e:
