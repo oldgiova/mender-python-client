@@ -12,13 +12,14 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-import logging as log
+import logging 
 import os
 from typing import List
 
 from mender.scripts import artifactinfo, devicetype
 from mender.scripts.aggregator.aggregator import ScriptKeyValueAggregator
 
+log = logging.getLogger()
 
 def aggregate(script_path: str, device_type_path: str, artifact_info_path: str) -> dict:
     """Runs all the inventory scripts in 'path', and parses the 'key=value' pairs

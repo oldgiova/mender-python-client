@@ -42,6 +42,7 @@ class RemoteTerminal:
 
     def __init__(self):
         log.info("RemoteTerminal initialized")
+        logging.getLogger("websockets").propagate = False
 
         self.client = None
         self.sid = None
@@ -54,6 +55,7 @@ class RemoteTerminal:
         self.shell = None
         self.sending_thread = None
         self.run_sending_thread = False
+        self.msg_processor_thread = None
 
     async def ws_connect(self):
         """connects to the backend websocket server."""
@@ -67,12 +69,40 @@ class RemoteTerminal:
         )
         try:
             self.client = await websockets.connect(
-                uri, ssl=self.ssl_context, extra_headers=self.ext_headers
+                uri, ssl=self.ssl_context, extra_headers=self.ext_headers, logger=logging.getLogger("mender")
             )
             self.ws_connected = True
             log.debug(f"connected to: {uri}")
         except WebSocketException as ws_exception:
-            log.error(f"ws_connect: {ws_exception}")
+            log.error(f"WebSocketException in ws_connect: {ws_exception}")
+        except OSError as os_error:
+            log.error(f"OSError in ws_connect: {os_error}")
+            if self.client:
+                try:
+                    await self.client.close()
+                except Exception:
+                    pass
+                finally:
+                    self.client = None
+        except asyncio.TimeoutError as to_error:
+            log.error(f"asyncio.TimeoutError in ws_connect: {to_error}")
+            if self.client:
+                try:
+                    await self.client.close()
+                except Exception:
+                    pass
+                finally:
+                    self.client = None
+        except Exception as general_ex:
+            log.error(f"Exception in ws_connect: {general_ex}")
+            if self.client:
+                try:
+                    await self.client.close()
+                except Exception:
+                    pass
+                finally:
+                    self.client = None
+
 
     async def proto_msg_processor(self):
         """after having connected to the backend it processes the protocol messages.
@@ -90,6 +120,9 @@ class RemoteTerminal:
                 packed_msg = await self.client.recv()
                 msg: dict = msgpack.unpackb(packed_msg, raw=False)
                 hdr = msg["hdr"]
+                typ = hdr["typ"]
+                sid = hdr["sid"]
+                log.debug(f"Received msg {typ}, sid: {sid}")
                 if hdr["typ"] == MESSAGE_TYPE_SPAWN_SHELL and not self.sid:
                     self.sid = hdr["sid"]
                     await self.send_client_status_to_backend(MESSAGE_TYPE_SPAWN_SHELL)
@@ -111,12 +144,33 @@ class RemoteTerminal:
                         )
                         self.sid = None
         except WebSocketException as ws_exception:
-            log.error(f"proto_msg_processor: {ws_exception}")
+            log.error(f"WebSocketException in proto_msg_processor: {ws_exception}")
+            self.log_state()
             self.ws_connected = False
+            self.sid = None
+            try:
+                await self.client.close()
+            finally:
+                self.client = None
+            self.stop_session()
+            log.error("WebSocketClientProtocol is closed")
+            log.error("proto_msg_processor finished")
+        except Exception as general_ex:
+            log.error(f"Exception in proto_msg_processor: {general_ex}")
+            self.log_state()
+            self.ws_connected = False
+            self.sid = None
+            try:
+                await self.client.close()
+            finally:
+                self.client = None
+            self.stop_session()
+            log.error("WebSocketClientProtocol is closed")
+            log.error("proto_msg_processor finished")
+
 
     def stop_session(self):
         """does a cleanup of all related session variables"""
-
         if self.shell:
             self.shell.kill()
             self.shell = None
@@ -131,6 +185,8 @@ class RemoteTerminal:
             self.sending_thread.join(1)
             if self.sending_thread.is_alive():
                 log.error("Sending thread did not finish within 1 second")
+        log.debug("Session cleanup done.")
+        self.log_state()
 
     async def send_terminal_stdout_to_backend(self):
         """reads the data from the shell's stdout descriptor, packs into the protocol msg
@@ -192,25 +248,34 @@ class RemoteTerminal:
         """starts transmitting thread"""
 
         log.debug("about to start transmitting thread")
+        self.log_state()
         self.run_sending_thread = True
         self.sending_thread = threading.Thread(
             target=lambda: asyncio.run(self.send_terminal_stdout_to_backend())
         )
         self.sending_thread.name = "sending_thread"
         self.sending_thread.start()
+        log.debug("Transmitting thread started")
+        self.log_state()
+
 
     def run_msg_processor_thread(self):
         """starts the protocol messages thread"""
 
         log.debug("about to start msg processor thread")
-        thread_ws = threading.Thread(
+        self.log_state()
+        self.msg_processor_thread = threading.Thread(
             target=lambda: asyncio.run(self.proto_msg_processor())
         )
-        thread_ws.name = "proto_msg_thread"
-        thread_ws.start()
+        self.msg_processor_thread.name = "msg_processor_thread"
+        self.msg_processor_thread.start()
+        log.debug("msg processor thread started")
+        self.log_state()
 
     def open_terminal(self):
         """opens new pty/tty, invokes the new shell and connects them"""
+        log.debug("about to open tty and connect to it")
+        self.log_state()
         self.master, self.slave = pty.openpty()
         # by default the shell owner is root
         self.shell = subprocess.Popen(
@@ -220,6 +285,8 @@ class RemoteTerminal:
             stdout=self.slave,
             stderr=self.slave,
         )
+        log.debug("tty open and connected")
+        self.log_state()
 
     def load_server_certificate(self):
         """tries to load SSL certificate from config file
@@ -238,6 +305,8 @@ class RemoteTerminal:
         """the main entry point for running the whole functionality. Supposed to be run
         after the device has authorized and JWT token obtained. """
 
+        log.debug("About to call run()")
+        self.log_state()
         self.context = context
         try:
             if context.remoteTerminalConfig.RemoteTerminal:
@@ -255,3 +324,25 @@ class RemoteTerminal:
                 log.info("RemoteTerminal not enabled in mender-connect.conf")
         except AttributeError:
             log.error("Missing configuration file: mender-connect.conf")
+        log.debug("run() completed")
+        self.log_state()
+
+    def log_state(self):
+        """logs the current internal state of the class instance"""
+        str = "RemoteTerminal state: "
+        if self.msg_processor_thread is None:
+            str += (f"msg_processor_thread: None, ")
+        else:
+            str += (f"msg_processor_thread is_alive: {self.msg_processor_thread.is_alive()}, ")
+        str += (f"ws_connected: {self.ws_connected}, ")
+        str += (f"SID: [{self.sid}], ")
+        str += (f"master: {self.master}, ")
+        str += (f"slave: {self.slave}, ")
+        str += (f"shell: {self.shell}, ")
+        str += (f"run_sending_thread: {self.run_sending_thread}, ")
+        if self.sending_thread is None:
+            str += (f"sending_thread: None, ")
+        else:
+            str += (f"sending_thread is_alive: {self.sending_thread.is_alive()}, ")
+        str += (f"END.")
+        log.debug(str)
