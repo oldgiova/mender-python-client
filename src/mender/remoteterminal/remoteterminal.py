@@ -74,9 +74,9 @@ class RemoteTerminal:
             self.ws_connected = True
             log.debug(f"connected to: {uri}")
         except WebSocketException as ws_exception:
-            log.error(f"ws_connect: {ws_exception}")
+            log.error(f"WebSocketException in ws_connect: {ws_exception}")
         except OSError as os_error:
-            log.error(f"ws_connect: {os_error}")
+            log.error(f"OSError in ws_connect: {os_error}")
             if self.client:
                 try:
                     await self.client.close()
@@ -84,6 +84,25 @@ class RemoteTerminal:
                     pass
                 finally:
                     self.client = None
+        except asyncio.TimeoutError as to_error:
+            log.error(f"asyncio.TimeoutError in ws_connect: {to_error}")
+            if self.client:
+                try:
+                    await self.client.close()
+                except Exception:
+                    pass
+                finally:
+                    self.client = None
+        except Exception as general_ex:
+            log.error(f"Exception in ws_connect: {general_ex}")
+            if self.client:
+                try:
+                    await self.client.close()
+                except Exception:
+                    pass
+                finally:
+                    self.client = None
+
 
     async def proto_msg_processor(self):
         """after having connected to the backend it processes the protocol messages.
@@ -125,7 +144,7 @@ class RemoteTerminal:
                         )
                         self.sid = None
         except WebSocketException as ws_exception:
-            log.error(f"proto_msg_processor: {ws_exception}")
+            log.error(f"WebSocketException in proto_msg_processor: {ws_exception}")
             self.log_state()
             self.ws_connected = False
             self.sid = None
@@ -137,7 +156,7 @@ class RemoteTerminal:
             log.error("WebSocketClientProtocol is closed")
             log.error("proto_msg_processor finished")
         except Exception as general_ex:
-            log.error(f"proto_msg_processor: {general_ex}")
+            log.error(f"Exception in proto_msg_processor: {general_ex}")
             self.log_state()
             self.ws_connected = False
             self.sid = None
