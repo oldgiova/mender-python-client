@@ -104,7 +104,7 @@ def request(
         else:
             log.error(f"Error {r.reason}. code: {r.status_code}")
             log.error("Error while fetching update")
-            if r.status_code in (400, 404, 500):
+            if r.status_code in (400, 500):
                 log.debug(f"Error: {r.json()}")
         return deployment_info
     except MenderRequestsException as e:
