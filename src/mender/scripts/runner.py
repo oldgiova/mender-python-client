@@ -19,13 +19,17 @@ from mender.settings import settings
 
 log = logging.getLogger(__name__)
 
+INSTALL_SCRIPT_OK = 0
+INSTALL_SCRIPT_NOT_FOUND_ERROR = 1
+INSTALL_SCRIPT_PERMISSION_ERROR = 2
 
-def run_sub_updater(deployment_id: str) -> bool:
+
+def run_sub_updater(deployment_id: str) -> int:
     """run_sub_updater runs the /usr/share/mender/install script"""
     log.info(f"Running the sub-updater script at {settings.PATHS.install_script}")
     if not os.path.exists(settings.PATHS.install_script):
         log.error(f"No install script found at '{settings.PATHS.install_script}'")
-        return False
+        return INSTALL_SCRIPT_NOT_FOUND_ERROR
     try:
         # Store the deployment ID in the update lockfile
         with open(settings.PATHS.lockfile_path, "w") as f:
@@ -34,12 +38,12 @@ def run_sub_updater(deployment_id: str) -> bool:
             [
                 f"{settings.PATHS.install_script}",
                 settings.PATHS.artifact_download + "/artifact.mender",
-            ],
+            ]
         )
-        return True
+        return INSTALL_SCRIPT_OK
     except PermissionError as e:
         log.error(
             f"The install script '{settings.PATHS.install_script}' has the wrong permissions."
         )
         log.error(f"Error {e}")
-    return False
+    return INSTALL_SCRIPT_PERMISSION_ERROR

@@ -293,21 +293,44 @@ class Download(State):
                     "Failed to report the deployment status 'downloading' to the Mender server"
                 )
             return ArtifactInstall()
+        log.warning(
+            "The Artifact has not been properly downloaded due to lack of Internet access or a server failure."
+        )
+        log.warning(
+            "The next attempt of the update will happen after the UpdatePollIntervalSeconds config variable."
+        )
         return ArtifactFailure()
 
 
 class ArtifactInstall(State):
     def run(self, context):
         log.info("Running the ArtifactInstall state...")
-        if installscriptrunner.run_sub_updater(context.deployment.ID):
+        ret = installscriptrunner.run_sub_updater(context.deployment.ID)
+        if ret == installscriptrunner.INSTALL_SCRIPT_OK:
             log.info(
                 "The client has successfully spawned the install-script process. Exiting. Goodbye!"
             )
             sys.exit(0)
             # return ArtifactReboot()
-        log.error(
-            "The daemon should never reach this point. Something is wrong with the setup of the client."
-        )
+        elif ret in (
+            installscriptrunner.INSTALL_SCRIPT_NOT_FOUND_ERROR,
+            installscriptrunner.INSTALL_SCRIPT_PERMISSION_ERROR,
+        ):
+            if not deployments.report(
+                context.config.ServerURL,
+                deployments.STATUS_FAILURE,
+                context.deployment.ID,
+                context.config.ServerCertificate,
+                context.JWT,
+                deployment_logger=log,
+            ):
+                log.error(
+                    "Failed to report the deployment status 'FAILURE' to the Mender server"
+                )
+        else:
+            log.error(
+                "The daemon should never reach this point. Something is wrong with the setup of the client."
+            )
         sys.exit(1)
         # return ArtifactFailure()
 
@@ -347,8 +370,8 @@ class ArtifactRollbackReboot(State):
 class ArtifactFailure(State):
     def run(self, context):
         log.info("Running the ArtifactFailure state...")
-        # return _UpdateDone()
-        raise UnsupportedState("ArtifactFailure is unhandled by the API client")
+        return _UpdateDone()
+        # raise UnsupportedState("ArtifactFailure is unhandled by the API client")
 
 
 class _UpdateDone(State):
@@ -370,6 +393,13 @@ class UpdateStateMachine(AuthorizedStateMachine):
         self.current_state = Download()
 
     def run(self, context):
+        """Generally it is assumed that download would succeded
+         and the state would change to ArtifactInstall and that would do other things
+         in external system scripts while this client exits.
+         Still in real world scenario the download sometimes is failing due to the poor radio conditions
+         and changes the state to ArtifactFailure.
+         After returning from ArtifactFailure state we will need to return to IdleState
+         in AuthorizedStateMachine to let it go another chance after some time."""
         while self.current_state != _UpdateDone():
             self.current_state = self.current_state.run(context)
             time.sleep(1)
