@@ -147,7 +147,7 @@ class RemoteTerminal:
                         self.sid = None
         except WebSocketException as ws_exception:
             log.error(f"WebSocketException in proto_msg_processor: {ws_exception}")
-            self.log_state()
+            log.debug(self.get_detailed_state())
             self.ws_connected = False
             self.sid = None
             try:
@@ -159,7 +159,7 @@ class RemoteTerminal:
             log.error("proto_msg_processor finished")
         except Exception as general_ex:
             log.error(f"Exception in proto_msg_processor: {general_ex}")
-            self.log_state()
+            log.debug(self.get_detailed_state())
             self.ws_connected = False
             self.sid = None
             try:
@@ -187,7 +187,7 @@ class RemoteTerminal:
             if self.sending_thread.is_alive():
                 log.error("Sending thread did not finish within 1 second")
         log.debug("Session cleanup done.")
-        self.log_state()
+        log.debug(self.get_detailed_state())
 
     async def send_terminal_stdout_to_backend(self):
         """reads the data from the shell's stdout descriptor, packs into the protocol msg
@@ -249,7 +249,7 @@ class RemoteTerminal:
         """starts transmitting thread"""
 
         log.debug("about to start transmitting thread")
-        self.log_state()
+        log.debug(self.get_detailed_state())
         self.run_sending_thread = True
         self.sending_thread = threading.Thread(
             target=lambda: asyncio.run(self.send_terminal_stdout_to_backend())
@@ -257,25 +257,25 @@ class RemoteTerminal:
         self.sending_thread.name = "sending_thread"
         self.sending_thread.start()
         log.debug("Transmitting thread started")
-        self.log_state()
+        log.debug(self.get_detailed_state())
 
     def run_msg_processor_thread(self):
         """starts the protocol messages thread"""
 
         log.debug("about to start msg processor thread")
-        self.log_state()
+        log.debug(self.get_detailed_state())
         self.msg_processor_thread = threading.Thread(
             target=lambda: asyncio.run(self.proto_msg_processor())
         )
         self.msg_processor_thread.name = "msg_processor_thread"
         self.msg_processor_thread.start()
         log.debug("msg processor thread started")
-        self.log_state()
+        log.debug(self.get_detailed_state())
 
     def open_terminal(self):
         """opens new pty/tty, invokes the new shell and connects them"""
         log.debug("about to open tty and connect to it")
-        self.log_state()
+        log.debug(self.get_detailed_state())
         self.master, self.slave = pty.openpty()
         # by default the shell owner is root
         self.shell = subprocess.Popen(
@@ -286,7 +286,7 @@ class RemoteTerminal:
             stderr=self.slave,
         )
         log.debug("tty open and connected")
-        self.log_state()
+        log.debug(self.get_detailed_state())
 
     def load_server_certificate(self):
         """tries to load SSL certificate from config file
@@ -306,7 +306,7 @@ class RemoteTerminal:
         after the device has authorized and JWT token obtained. """
 
         log.debug("About to call run()")
-        self.log_state()
+        log.debug(self.get_detailed_state())
         self.context = context
         try:
             if context.remoteTerminalConfig.RemoteTerminal:
@@ -325,24 +325,41 @@ class RemoteTerminal:
         except AttributeError:
             log.error("Missing configuration file: mender-connect.conf")
         log.debug("run() completed")
-        self.log_state()
+        log.debug(self.get_detailed_state())
+        log.info(self.get_state())
 
-    def log_state(self):
-        """logs the current internal state of the class instance"""
-        str = "RemoteTerminal state: "
+    def get_detailed_state(self) -> str:
+        """logs the detailed, current, internal state of the Remote Terminal
+        Useful for debugging."""
+        log_str = "RemoteTerminal state: "
         if self.msg_processor_thread is None:
-            str += f"msg_processor_thread: None, "
+            log_str += "msg_processor_thread: None, "
         else:
-            str += f"msg_processor_thread is_alive: {self.msg_processor_thread.is_alive()}, "
-        str += f"ws_connected: {self.ws_connected}, "
-        str += f"SID: [{self.sid}], "
-        str += f"master: {self.master}, "
-        str += f"slave: {self.slave}, "
-        str += f"shell: {self.shell}, "
-        str += f"run_sending_thread: {self.run_sending_thread}, "
+            log_str += f"msg_processor_thread is_alive: {self.msg_processor_thread.is_alive()}, "
+        log_str += f"ws_connected: {self.ws_connected}, "
+        log_str += f"SID: [{self.sid}], "
+        log_str += f"master: {self.master}, "
+        log_str += f"slave: {self.slave}, "
+        log_str += f"shell: {self.shell}, "
+        log_str += f"run_sending_thread: {self.run_sending_thread}, "
         if self.sending_thread is None:
-            str += f"sending_thread: None, "
+            log_str += "sending_thread: None, "
         else:
-            str += f"sending_thread is_alive: {self.sending_thread.is_alive()}, "
-        str += f"END."
-        log.debug(str)
+            log_str += f"sending_thread is_alive: {self.sending_thread.is_alive()}, "
+        log_str += "END."
+        return log_str
+
+    def get_state(self) -> str:
+        """logs the current, internal state of the Remote Terminal"""
+        log_str = "RemoteTerminal "
+        if self.msg_processor_thread is None:
+            log_str += "IN_ERROR_STATE"
+        elif self.msg_processor_thread.is_alive():
+            log_str += "IS_WORKING "
+            if self.ws_connected:
+                log_str += "IS_CONNECTED "
+                if self.sending_thread is not None and self.sending_thread.is_alive():
+                    log_str += "SESSION_IS_ACTIVE"
+            else:
+                log_str += "IS_NOT_CONNECTED"
+        return log_str
