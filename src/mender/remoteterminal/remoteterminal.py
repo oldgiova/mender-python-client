@@ -69,7 +69,10 @@ class RemoteTerminal:
         )
         try:
             self.client = await websockets.connect(
-                uri, ssl=self.ssl_context, extra_headers=self.ext_headers, logger=logging.getLogger("mender")
+                uri,
+                ssl=self.ssl_context,
+                extra_headers=self.ext_headers,
+                logger=logging.getLogger("mender"),
             )
             self.ws_connected = True
             log.debug(f"connected to: {uri}")
@@ -102,7 +105,6 @@ class RemoteTerminal:
                     pass
                 finally:
                     self.client = None
-
 
     async def proto_msg_processor(self):
         """after having connected to the backend it processes the protocol messages.
@@ -167,7 +169,6 @@ class RemoteTerminal:
             self.stop_session()
             log.error("WebSocketClientProtocol is closed")
             log.error("proto_msg_processor finished")
-
 
     def stop_session(self):
         """does a cleanup of all related session variables"""
@@ -258,7 +259,6 @@ class RemoteTerminal:
         log.debug("Transmitting thread started")
         self.log_state()
 
-
     def run_msg_processor_thread(self):
         """starts the protocol messages thread"""
 
@@ -331,18 +331,18 @@ class RemoteTerminal:
         """logs the current internal state of the class instance"""
         str = "RemoteTerminal state: "
         if self.msg_processor_thread is None:
-            str += (f"msg_processor_thread: None, ")
+            str += f"msg_processor_thread: None, "
         else:
-            str += (f"msg_processor_thread is_alive: {self.msg_processor_thread.is_alive()}, ")
-        str += (f"ws_connected: {self.ws_connected}, ")
-        str += (f"SID: [{self.sid}], ")
-        str += (f"master: {self.master}, ")
-        str += (f"slave: {self.slave}, ")
-        str += (f"shell: {self.shell}, ")
-        str += (f"run_sending_thread: {self.run_sending_thread}, ")
+            str += f"msg_processor_thread is_alive: {self.msg_processor_thread.is_alive()}, "
+        str += f"ws_connected: {self.ws_connected}, "
+        str += f"SID: [{self.sid}], "
+        str += f"master: {self.master}, "
+        str += f"slave: {self.slave}, "
+        str += f"shell: {self.shell}, "
+        str += f"run_sending_thread: {self.run_sending_thread}, "
         if self.sending_thread is None:
-            str += (f"sending_thread: None, ")
+            str += f"sending_thread: None, "
         else:
-            str += (f"sending_thread is_alive: {self.sending_thread.is_alive()}, ")
-        str += (f"END.")
+            str += f"sending_thread is_alive: {self.sending_thread.is_alive()}, "
+        str += f"END."
         log.debug(str)

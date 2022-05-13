@@ -53,6 +53,7 @@ def setup(args):
     mender_logger.setLevel(level)
     log.info(f"Log level set to {logging.getLevelName(level)}")
 
+
 def thread_id_filter(record):
     record.thread_id = threading.get_native_id()
     return record
