@@ -1,4 +1,4 @@
-# Copyright 2021 Northern.tech AS
+# Copyright 2022 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import select
 import ssl
 import subprocess
 import threading
+import time
 
 import msgpack  # type: ignore
 import websockets
@@ -32,6 +33,9 @@ log = logging.getLogger(__name__)
 MESSAGE_TYPE_SHELL_COMMAND = "shell"
 MESSAGE_TYPE_SPAWN_SHELL = "new"
 MESSAGE_TYPE_STOP_SHELL = "stop"
+MESSAGE_TYPE_PING = "ping"
+
+PING_INTERVAL_IN_SECONDS = 50
 
 
 class RemoteTerminal:
@@ -52,7 +56,9 @@ class RemoteTerminal:
         self.master = None
         self.slave = None
         self.shell = None
+        self.ping_thread = None
         self.sending_thread = None
+        self.run_ping_thread = False
         self.run_sending_thread = False
 
     async def ws_connect(self):
@@ -94,6 +100,7 @@ class RemoteTerminal:
                     self.sid = hdr["sid"]
                     await self.send_client_status_to_backend(MESSAGE_TYPE_SPAWN_SHELL)
                     self.open_terminal()
+                    self.start_ping_thread()
                     self.start_transmitting_thread()
                 elif hdr["typ"] == MESSAGE_TYPE_SHELL_COMMAND:
                     if (
@@ -131,6 +138,11 @@ class RemoteTerminal:
             self.sending_thread.join(1)
             if self.sending_thread.is_alive():
                 log.error("Sending thread did not finish within 1 second")
+        self.run_ping_thread = False
+        if self.ping_thread:
+            self.ping_thread.join(1)
+            if self.ping_thread.is_alive():
+                log.error("Ping thread did not finish within 1 second")
 
     async def send_terminal_stdout_to_backend(self):
         """reads the data from the shell's stdout descriptor, packs into the protocol msg
@@ -163,6 +175,32 @@ class RemoteTerminal:
                     log.info("Session closed.")
                 else:
                     log.error(f"send_terminal_stdout_to_backend: {io_error}")
+
+    async def send_pings_to_backend(self):
+        if not self.ws_connected:
+            log.debug("leaving send_pings_to_backend")
+            return -1
+        latest_ping = time.time()
+        while self.run_ping_thread:
+            await asyncio.sleep(1)
+            if time.time() - latest_ping < PING_INTERVAL_IN_SECONDS:
+                continue
+            try:
+                response = {
+                    "hdr": {"proto": 1, "typ": MESSAGE_TYPE_PING, "sid": self.sid,},
+                    "props": {"status": 1},
+                    "body": None,
+                }
+                await self.client.send(msgpack.packb(response, use_bin_type=True))
+                latest_ping = time.time()
+            except TypeError as type_error:
+                log.error(f"send_pings_to_backend: {type_error}")
+            except IOError as io_error:
+                # errno 5 is expected after closing the file descriptor on which os.read waits
+                if io_error.errno == 5:
+                    log.info("Session closed.")
+                else:
+                    log.error(f"send_pings_to_backend: {io_error}")
 
     async def send_client_status_to_backend(self, status):
         """send connection status to backend"""
@@ -198,6 +236,17 @@ class RemoteTerminal:
         )
         self.sending_thread.name = "sending_thread"
         self.sending_thread.start()
+
+    def start_ping_thread(self):
+        """starts ping thread"""
+
+        log.debug("about to start ping thread")
+        self.run_ping_thread = True
+        self.ping_thread = threading.Thread(
+            target=lambda: asyncio.run(self.send_pings_to_backend())
+        )
+        self.ping_thread.name = "ping_thread"
+        self.ping_thread.start()
 
     def run_msg_processor_thread(self):
         """starts the protocol messages thread"""
