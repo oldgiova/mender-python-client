@@ -7,7 +7,7 @@ FILES_${PN}_append = " ${bindir}mender-sub-updater \
          ${systemd_unitdir}/system/mender-python-client.service"
 
 LICENSE = "Apache-2.0"
-LIC_FILES_CHKSUM = "file://LICENSE;md5=dcac2e5bf81a6fe99b034aaaaf1b2019"
+LIC_FILES_CHKSUM = "file://LICENSE;md5=cb85b9ea08b73c6b288729a6b793a87c"
 
 MENDER_PYTHON_CLIENT_BUILD_BRANCH ?= "master"
 
