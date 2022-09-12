@@ -25,7 +25,8 @@ def setup(args):
     stream_handler.setFormatter(
         logging.Formatter(
             datefmt="%Y-%m-%d %H:%M:%S",
-            fmt="%(module)-15s %(threadName)-20s-%(thread_id)-3s %(asctime)s %(levelname)-8s %(message)s",
+            fmt="%(module)-15s %(threadName)-20s-%(thread_id)-3s "
+            + "%(asctime)s %(levelname)-8s %(message)s",
         )
     )
     stream_handler.addFilter(thread_id_filter)

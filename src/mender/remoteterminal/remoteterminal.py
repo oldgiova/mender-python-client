@@ -63,6 +63,7 @@ class RemoteTerminal:
         self.run_sending_thread = False
         self.msg_processor_thread = None
 
+    # pylint: disable=too-many-branches
     async def ws_connect(self):
         """connects to the backend websocket server."""
 
@@ -73,6 +74,7 @@ class RemoteTerminal:
             self.context.config.ServerURL.replace("https", "wss")
             + "/api/devices/v1/deviceconnect/connect"
         )
+        # pylint: disable=broad-except
         try:
             self.client = await websockets.connect(
                 uri,
@@ -112,6 +114,7 @@ class RemoteTerminal:
                 finally:
                     self.client = None
 
+    # pylint: disable=too-many-statements
     async def proto_msg_processor(self):
         """after having connected to the backend it processes the protocol messages.
         This function is called in a thread."""
@@ -123,6 +126,7 @@ class RemoteTerminal:
             return -1
         log.debug("Websocket connected")
 
+        # pylint: disable=broad-except
         try:
             while True:
                 packed_msg = await self.client.recv()
