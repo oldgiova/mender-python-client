@@ -12,6 +12,7 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 import logging
+import threading
 
 from mender.log.log import DeploymentLogHandler
 
@@ -24,9 +25,10 @@ def setup(args):
     stream_handler.setFormatter(
         logging.Formatter(
             datefmt="%Y-%m-%d %H:%M:%S",
-            fmt="%(name)s %(asctime)s %(levelname)-8s %(message)s",
+            fmt="%(module)-15s %(threadName)-20s-%(thread_id)-3s %(asctime)s %(levelname)-8s %(message)s",
         )
     )
+    stream_handler.addFilter(thread_id_filter)
     handlers.append(stream_handler)
     level = {
         "debug": logging.DEBUG,
@@ -50,3 +52,8 @@ def setup(args):
     mender_logger.handlers = handlers
     mender_logger.setLevel(level)
     log.info(f"Log level set to {logging.getLevelName(level)}")
+
+
+def thread_id_filter(record):
+    record.thread_id = threading.get_native_id()
+    return record
