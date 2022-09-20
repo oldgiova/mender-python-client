@@ -1,4 +1,4 @@
-# Copyright 2021 Northern.tech AS
+# Copyright 2022 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -12,12 +12,14 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-import logging as log
+import logging
 import os
 from typing import List
 
 from mender.scripts import artifactinfo, devicetype
 from mender.scripts.aggregator.aggregator import ScriptKeyValueAggregator
+
+log = logging.getLogger()
 
 
 def aggregate(script_path: str, device_type_path: str, artifact_info_path: str) -> dict:

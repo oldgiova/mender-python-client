@@ -90,7 +90,8 @@ class Config:
 def load(local_path: str, global_path: str) -> Optional[Config]:
     """Read and return the merged configuration from the local and global config files"""
     log.info("Loading the configuration files...")
-    log.debug(f"global_path: {global_path}\nlocal_path: {local_path}")
+    log.debug(f"global_path: {global_path}")
+    log.debug(f" local_path: {local_path}")
     global_conf = local_conf = None
     try:
         with open(global_path, "r") as fh:
