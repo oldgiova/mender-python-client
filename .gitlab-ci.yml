@@ -72,8 +72,6 @@ test:integration:
     - mender-qa-slave-highcpu
   needs:
     - build:client
-  dependencies:
-    - build:client
   before_script:
     - unset DOCKER_HOST
     - unset DOCKER_TLS_VERIFY
