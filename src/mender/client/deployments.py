@@ -263,7 +263,7 @@ def download_and_resume(
                 # Download completed in one go, return
                 log.debug(
                     f"Got EOF. Wrote {offset} bytes. Total is {content_length}."
-                    + "Time {millisec_diff_now(date_start)/1000:.2f} seconds"
+                    + f"Time {millisec_diff_now(date_start)/1000:.2f} seconds"
                 )
                 if offset >= content_length:
                     return True
@@ -271,19 +271,19 @@ def download_and_resume(
             log.debug(e)
             log.debug(
                 f"Got Error. Wrote {offset} bytes. Total is {content_length}."
-                + "Time {millisec_diff_now(date_start):.0f} milliseconds"
+                + f"Time {millisec_diff_now(date_start):.0f} milliseconds"
             )
         except requests.ConnectionError as e:
             log.debug(e)
             log.debug(
                 f"Got Error. Wrote {offset} bytes. Total is {content_length}."
-                + "Time {millisec_diff_now(date_start):.0f} milliseconds"
+                + f"Time {millisec_diff_now(date_start):.0f} milliseconds"
             )
         except SSLError as e:
             log.debug(e)
             log.debug(
                 f"Got Error. Wrote {offset} bytes. Total is {content_length}."
-                + "Time {millisec_diff_now(date_start):.0f} milliseconds"
+                + f"Time {millisec_diff_now(date_start):.0f} milliseconds"
             )
 
         # Prepare for next attempt
