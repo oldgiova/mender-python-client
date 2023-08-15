@@ -1,4 +1,4 @@
-# Copyright 2021 Northern.tech AS
+# Copyright 2023 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -37,8 +37,8 @@ DOWNLOAD_RESUME_MIN_INTERVAL_SECONDS = 60
 DOWNLOAD_RESUME_MAX_INTERVAL_SECONDS = 10 * 60
 
 DOWNLOAD_CHUNK_SIZE_BYTES = 1024 * 1024 // 8
-DONWLOAD_CONNECT_TIMEOUT_SECONDS = 3
-DONWLOAD_READ_TIMEOUT_SECONDS = 10
+DOWNLOAD_CONNECT_TIMEOUT_SECONDS = 3
+DOWNLOAD_READ_TIMEOUT_SECONDS = 10
 
 
 class DeploymentDownloadFailed(Exception):
@@ -224,8 +224,8 @@ def download_and_resume(
                 stream=True,
                 verify=server_certificate or True,
                 timeout=(
-                    DONWLOAD_CONNECT_TIMEOUT_SECONDS,
-                    DONWLOAD_READ_TIMEOUT_SECONDS,
+                    DOWNLOAD_CONNECT_TIMEOUT_SECONDS,
+                    DOWNLOAD_READ_TIMEOUT_SECONDS,
                 ),
             ) as response:
                 if not content_length:
