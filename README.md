@@ -3,6 +3,10 @@
 [![Total alerts](https://img.shields.io/lgtm/alerts/g/mendersoftware/mender-python-client.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/mendersoftware/mender-python-client/alerts/)
 [![Language grade: Python](https://img.shields.io/lgtm/grade/python/g/mendersoftware/mender-python-client.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/mendersoftware/mender-python-client/context:python)
 
+# This repository is no longer maintained.
+
+The Mender client repository can be found at [mendersoftware/mender](https://github.com/mendersoftware/mender/).
+
 Mender Python Client: A Python implementation of the Mender client
 ==============================================
 
